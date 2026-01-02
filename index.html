@@ -222,6 +222,7 @@
             updateUserUI(state);
         }
 
+        // --- دالة جلب البيانات المصححة ---
         async function fetchQuranData(surahNum, startV, endV) {
             const displayDiv = document.getElementById('quranTextDisplay');
             const loadingDiv = document.getElementById('quranLoading');
@@ -232,22 +233,21 @@
             audioDiv.classList.add('hidden');
 
             try {
-                // التأكد من أن الآيات منطقية
-                if(startV > endV) throw new Error("ترتيب الآيات غير صحيح");
-                
+                // حماية من الأرقام الخاطئة
+                if (!surahNum || startV <= 0 || endV < startV) {
+                     throw new Error("نطاق الآيات غير صحيح");
+                }
+
                 const limit = endV - startV + 1;
                 const offset = startV - 1; 
-                
-                // Fetch Request
                 const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahNum}/quran-uthmani?offset=${offset}&limit=${limit}`);
                 
-                if(!response.ok) {
-                    throw new Error(`خطأ في الاتصال: ${response.status}`);
-                }
+                if(!response.ok) throw new Error("فشل الاتصال بالمصدر");
 
                 const data = await response.json();
 
-                if(data.code === 200) {
+                // 🔥 هنا التعديل لإصلاح الخطأ forEach is not a function 🔥
+                if(data.code === 200 && data.data && Array.isArray(data.data.ayahs)) {
                     const ayahs = data.data.ayahs;
                     let fullText = "";
                     audioPlaylist = [];
@@ -274,17 +274,16 @@
                     loadingDiv.classList.add('hidden');
                     audioDiv.classList.remove('hidden');
                 } else {
-                    displayDiv.innerHTML = `<span style="color:red">خطأ من المصدر: ${data.status}</span>`;
+                    // في حال كانت البيانات سليمة لكن لا تحتوي على مصفوفة
+                    throw new Error("تنسيق البيانات المستلمة غير متوافق");
                 }
             } catch (error) {
                 loadingDiv.classList.add('hidden');
-                // عرض تفاصيل الخطأ للمساعدة
-                displayDiv.innerHTML = `<div style="color:red; font-size:16px;">
-                    تعذر تحميل الآيات.<br>
-                    <small>السبب: ${error.message}</small><br>
-                    <small>ملاحظة: إذا كنت تفتحين الملف من جهازك مباشرة، يرجى رفعه على GitHub ليعمل.</small>
+                displayDiv.innerHTML = `<div style="color:#d32f2f; font-size:16px; padding:10px;">
+                    ⚠️ تعذر عرض الآيات تلقائياً.<br>
+                    <small>يرجى القراءة من المصحف الورقي (من آية ${startV} إلى ${endV})</small>
                 </div>`;
-                console.error(error);
+                console.error("Fetch Error:", error);
             }
         }
 
