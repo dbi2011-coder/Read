@@ -6,8 +6,14 @@
     <title>إدارة المقرأة (المشرفة)</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* إصلاح سريع للتأكد من أن العناصر مخفية */
         .hidden { display: none !important; }
+        /* تنسيق لزر إعادة الضبط */
+        .btn-reset {
+            background-color: #607d8b;
+            margin-top: 20px;
+            font-size: 14px;
+            padding: 10px;
+        }
     </style>
 </head>
 <body>
@@ -62,10 +68,11 @@
                 <tbody></tbody>
             </table>
         </div>
+
+        <button class="btn-reset" onclick="resetSession()">🔄 إنهاء وبدء جلسة جديدة</button>
     </div>
 
     <script>
-        // --- 1. البيانات والثوابت ---
         const STORAGE_KEY = 'quran_queue_offline_v3';
         const surahNames = [
             "", "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", 
@@ -82,7 +89,6 @@
             "المسد", "الإخلاص", "الفلق", "الناس"
         ];
 
-        // --- 2. دوال النظام الأساسية ---
         function getState() {
             const data = localStorage.getItem(STORAGE_KEY);
             return data ? JSON.parse(data) : {
@@ -95,7 +101,15 @@
 
         function saveState(state) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-            updateDashboardUI(state); // تحديث فوري للشاشة
+            updateDashboardUI(state);
+        }
+
+        // 🔥 دالة إعادة الضبط الجديدة 🔥
+        function resetSession() {
+            if(confirm("هل أنتِ متأكدة؟ سيتم مسح الطابور الحالي والبدء من جديد.")) {
+                localStorage.removeItem(STORAGE_KEY);
+                location.reload(); // إعادة تحميل الصفحة
+            }
         }
 
         function calculateVersesBlock(startFrom, amountType, amountValue) {
@@ -124,13 +138,10 @@
             return state;
         }
 
-        // --- 3. دوال التفاعل (الأزرار) ---
         function handleLogin() {
             const pass = document.getElementById('adminPass').value;
             if (pass === "1234") {
                 document.getElementById('loginScreen').classList.add('hidden');
-                
-                // التأكد هل توجد جلسة سابقة؟
                 const state = getState();
                 if (state.queue && state.queue.length > 0) {
                     document.getElementById('dashboardScreen').classList.remove('hidden');
@@ -204,20 +215,16 @@
             document.getElementById('readersTableContainer').classList.toggle('hidden');
         }
 
-        // --- 4. تحديث الشاشة (UI) ---
         function updateDashboardUI(state) {
             if(!state) return;
 
-            // زر الإيقاف
             const btnStop = document.getElementById('stopBookingBtn');
             btnStop.innerText = state.isBookingStopped ? "فتح الحجز" : "إيقاف الحجز";
             btnStop.style.backgroundColor = state.isBookingStopped ? "#4CAF50" : "#d32f2f";
 
-            // العداد
             const remaining = (state.queue ? state.queue.length : 0) - (state.currentReaderIndex + 1);
             document.getElementById('waitingCount').innerText = `المتبقي: ${remaining > 0 ? remaining : 0}`;
 
-            // القارئة الحالية
             if (state.queue && state.currentReaderIndex >= 0 && state.currentReaderIndex < state.queue.length) {
                 const curr = state.queue[state.currentReaderIndex];
                 document.getElementById('currentReaderDisplay').innerText = `تقرأ الآن: ${curr.name} (${curr.verses})`;
@@ -225,7 +232,6 @@
                 document.getElementById('currentReaderDisplay').innerText = "في انتظار البدء...";
             }
 
-            // الجدول
             const tbody = document.querySelector('#readersTable tbody');
             tbody.innerHTML = '';
             if(state.queue) {
@@ -246,9 +252,7 @@
             }
         }
 
-        // --- 5. التشغيل الأولي ---
         window.onload = function() {
-            // تعبئة السور
             const surahSelect = document.getElementById('surahNum');
             for (let i = 1; i < surahNames.length; i++) {
                 const option = document.createElement('option');
@@ -256,16 +260,14 @@
                 option.text = `${i}. ${surahNames[i]}`;
                 surahSelect.appendChild(option);
             }
-            surahSelect.value = 2; // البقرة
+            surahSelect.value = 2; 
 
-            // الاستماع لتغييرات من صفحة القارئات
             window.addEventListener('storage', (e) => {
                 if (e.key === STORAGE_KEY) {
                     updateDashboardUI(JSON.parse(e.newValue));
                 }
             });
             
-            // استرجاع آخر حالة
             updateDashboardUI(getState());
         };
     </script>
