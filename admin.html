@@ -10,7 +10,7 @@
         .hidden { display: none !important; }
         .btn-reset { background-color: #607d8b; margin-top: 20px; font-size: 14px; padding: 10px; }
         /* مؤشر التحميل */
-        .saving-indicator { position: fixed; top: 10px; left: 10px; background: #333; color: #fff; padding: 5px 10px; border-radius: 5px; font-size: 12px; display: none;}
+        .saving-indicator { position: fixed; top: 10px; left: 10px; background: #333; color: #fff; padding: 5px 10px; border-radius: 5px; font-size: 12px; display: none; z-index: 9999;}
     </style>
 </head>
 <body>
@@ -46,9 +46,13 @@
         </div>
 
         <button class="big-circle-btn" onclick="handleNextReader()">القارئة التالية ⏩</button>
-        <div id="currentReaderDisplay" style="margin: 20px 0; font-weight: bold; color: #00796b;">...</div>
+        
+        <div id="currentReaderDisplay" style="margin: 20px 0; font-weight: bold; color: #00796b;">
+            ...
+        </div>
 
         <button class="btn-secondary" onclick="toggleTable()">إدارة القارئات 📋</button>
+        
         <div id="readersTableContainer" class="hidden">
             <table id="readersTable">
                 <thead><tr><th>الاسم</th><th>الدور</th><th>الموضع</th><th>إجراءات</th></tr></thead>
@@ -63,7 +67,7 @@
         const SUPABASE_URL = 'https://imvcqsgaovkbocvswifx.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdmNxc2dhb3ZrYm9jdnN3aWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjczNzM0MDgsImV4cCI6MjA4Mjk0OTQwOH0.8hb29-fMG7eSkPod3u3X6mE_w5uVsz-Wm2zqmjgnOgg';
         
-        // تم تغيير اسم المتغير إلى supabaseClient لتجنب التضارب
+        // 🔥 تم تغيير اسم المتغير إلى supabaseClient لتجنب التضارب 🔥
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const surahNames = ["", "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه", "الأنبياء", "الحج", "المؤمنون", "النور", "الفرقان", "الشعراء", "النمل", "القصص", "العنكبوت", "الروم", "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر", "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق", "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر", "الممتحنة", "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج", "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس", "التكوير", "الإنفطار", "المطففين", "الإنشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"];
@@ -73,8 +77,8 @@
         async function getState() {
             // جلب البيانات من الجدول
             let { data, error } = await supabaseClient.from('session_state').select('data').eq('id', 1).single();
-            if (error) { console.error(error); return null; }
-            return data.data;
+            if (error) { console.error("Error fetching state:", error); return null; }
+            return data ? data.data : null;
         }
 
         async function saveState(state) {
@@ -96,7 +100,7 @@
             }
         }
 
-        // --- المنطق (نفس المنطق السابق) ---
+        // --- المنطق (الخوارزمية الذكية) ---
         function recalculateQueueVerses(state) {
             if (!state.queue) state.queue = [];
             if (!state.settings) state.settings = { surah: 1, startVerse: 1, amountType: 'verses', amountValue: 5 };
@@ -153,13 +157,22 @@
             const pass = document.getElementById('adminPass').value;
             if (pass === "1234") {
                 document.getElementById('loginScreen').classList.add('hidden');
-                const state = await getState();
-                if (state && state.queue && state.queue.length > 0) {
-                    document.getElementById('dashboardScreen').classList.remove('hidden');
-                    updateDashboardUI(state);
-                } else {
+                
+                // التأكد من تحميل الحالة عند الدخول
+                try {
+                    const state = await getState();
+                    if (state && state.queue && state.queue.length > 0) {
+                        document.getElementById('dashboardScreen').classList.remove('hidden');
+                        updateDashboardUI(state);
+                    } else {
+                        document.getElementById('setupScreen').classList.remove('hidden');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    // في حال كان الجدول فارغاً تماماً لأول مرة
                     document.getElementById('setupScreen').classList.remove('hidden');
                 }
+
             } else {
                 alert('كلمة المرور خاطئة');
             }
@@ -188,7 +201,7 @@
 
         async function handleNextReader() {
             let state = await getState();
-            if (state.queue.length > state.currentReaderIndex + 1) {
+            if (state && state.queue && state.queue.length > state.currentReaderIndex + 1) {
                 state.currentReaderIndex++;
                 await saveState(state);
             } else {
@@ -245,6 +258,7 @@
             tbody.innerHTML = '';
             if(state.queue) {
                 state.queue.forEach((reader, index) => {
+                    // إظهار من يقرأ الآن ومن يليه
                     if (index >= state.currentReaderIndex) {
                         const sName = surahNames[reader.surahNum] || "";
                         const row = `<tr>
@@ -272,7 +286,15 @@
             }
             surahSelect.value = 2; 
 
-            // تحميل الحالة الأولية
+            // الاستماع للتحديثات الحية من Supabase
+            // نستخدم supabaseClient هنا أيضاً
+            const channel = supabaseClient.channel('public:session_state')
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'session_state', filter: 'id=eq.1' }, payload => {
+                    updateDashboardUI(payload.new.data);
+                })
+                .subscribe();
+
+            // التحميل الأولي
             const initialState = await getState();
             if(initialState) updateDashboardUI(initialState);
         };
