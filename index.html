@@ -11,15 +11,16 @@
     <style>
         .hidden { display: none !important; }
         
-        /* تصميم صندوق المصحف */
+        /* تحسينات لصندوق المصحف */
         .quran-container {
-            background-color: #fffbf2; /* لون ورق المصحف */
+            background-color: #fffbf2;
             padding: 25px;
             border-radius: 15px;
-            border: 2px solid #d4af37; /* إطار ذهبي */
+            border: 2px solid #d4af37;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            margin-bottom: 25px;
+            margin-bottom: 25px; /* مسافة أسفله */
             text-align: center;
+            margin-top: 20px; /* مسافة تفصله عن مربع الدور */
         }
 
         .quran-header {
@@ -33,12 +34,12 @@
 
         .quran-text {
             font-family: 'Amiri Quran', serif;
-            font-size: 26px; /* حجم خط كبير وواضح */
+            font-size: 26px;
             line-height: 2.4;
             color: #000;
             direction: rtl;
             margin-bottom: 20px;
-            text-align: justify; /* محاذاة النص */
+            text-align: justify;
         }
 
         .basmala {
@@ -58,6 +59,14 @@
             display: inline-block;
         }
 
+        /* تحسين مربع الدور ليكون في الأعلى */
+        .status-box {
+            padding: 20px; /* تقليل الحجم قليلاً لكي لا يأخذ كل الشاشة */
+            border-radius: 15px;
+            margin-top: 10px;
+            transition: all 0.5s ease;
+        }
+        
         /* أزرار الصوت */
         .audio-controls {
             display: flex;
@@ -102,8 +111,13 @@
     </div>
 
     <div class="container hidden" id="statusScreen">
-        <h2 id="welcomeName" style="color: #00796b; margin-bottom: 20px;">...</h2>
+        <h2 id="welcomeName" style="color: #00796b; margin-bottom: 10px;">...</h2>
         
+        <div id="roleBox" class="status-box waiting">
+            <h1 id="statusText" style="margin: 10px 0;">...</h1>
+            <p id="subStatus" style="font-size: 16px;">...</p>
+        </div>
+
         <div class="quran-container">
             <div id="surahTitle" class="quran-header">...</div>
             
@@ -118,13 +132,8 @@
                 <div id="audioStatus" style="font-size: 14px; color: #555;"></div>
             </div>
         </div>
-
-        <div id="roleBox" class="status-box waiting">
-            <h1 id="statusText">...</h1>
-            <p id="subStatus">...</p>
-        </div>
         
-        <button onclick="location.reload()" style="background:none; color:#999; border:none; margin-top:20px; font-size:12px; box-shadow:none;">تسجيل خروج</button>
+        <button onclick="location.reload()" style="background:none; color:#999; border:none; margin-top:10px; font-size:12px; box-shadow:none;">تسجيل خروج</button>
     </div>
 
     <audio id="audioPlayer"></audio>
@@ -132,10 +141,11 @@
     <script>
         const STORAGE_KEY = 'quran_queue_offline_v3';
         let myId = null;
-        let audioPlaylist = []; // قائمة روابط الآيات
+        let audioPlaylist = []; 
         let currentAudioIndex = 0;
         let isPlaying = false;
-        let lastVersesHash = ""; // لمنع إعادة التحميل المتكرر
+        let lastVersesHash = ""; 
+        let lastStatus = ""; // لتتبع تغير الحالة وتفعيل التمرير التلقائي
 
         const surahNames = [
             "", "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", 
@@ -152,7 +162,6 @@
             "المسد", "الإخلاص", "الفلق", "الناس"
         ];
 
-        // --- الأساسيات ---
         function getState() {
             const data = localStorage.getItem(STORAGE_KEY);
             return data ? JSON.parse(data) : { settings: {surah: 1}, queue: [], currentReaderIndex: -1, isBookingStopped: false };
@@ -216,7 +225,6 @@
             updateUserUI(state);
         }
 
-        // --- 🔥 جلب النص القرآني والصوت 🔥 ---
         async function fetchQuranData(surahNum, startV, endV) {
             const displayDiv = document.getElementById('quranTextDisplay');
             const loadingDiv = document.getElementById('quranLoading');
@@ -227,10 +235,8 @@
             audioDiv.classList.add('hidden');
 
             try {
-                // استخدام API لجلب النص (الإصدار البسيط للنص لتجنب مشاكل الرسم المعقدة)
                 const limit = endV - startV + 1;
                 const offset = startV - 1; 
-                // نستخدم edition: quran-uthmani للحصول على رسم عثماني نصي
                 const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahNum}/quran-uthmani?offset=${offset}&limit=${limit}`);
                 const data = await response.json();
 
@@ -240,13 +246,11 @@
                     audioPlaylist = [];
                     currentAudioIndex = 0;
 
-                    // إضافة البسملة يدوياً إذا كانت بداية السورة (وليست الفاتحة أو التوبة)
                     if(startV === 1 && surahNum !== 1 && surahNum !== 9) {
                         displayDiv.innerHTML += '<div class="basmala">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>';
                     }
 
                     ayahs.forEach(ayah => {
-                        // تنظيف النص: بعض الـ APIs تدمج البسملة في الآية الأولى، نزيلها لنتجنب التكرار
                         let text = ayah.text;
                         if(surahNum !== 1 && startV === 1 && ayah.numberInSurah === 1) {
                              text = text.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").trim();
@@ -254,7 +258,6 @@
 
                         fullText += `<span>${text} <span class="ayah-symbol">۝</span> </span>`;
 
-                        // تحضير روابط الصوت (everyayah.com) - 3 خانات
                         const sID = String(surahNum).padStart(3, '0');
                         const vID = String(ayah.numberInSurah).padStart(3, '0');
                         audioPlaylist.push(`https://everyayah.com/data/Husary_128kbps/${sID}${vID}.mp3`);
@@ -262,11 +265,10 @@
 
                     displayDiv.innerHTML += fullText;
                     loadingDiv.classList.add('hidden');
-                    audioDiv.classList.remove('hidden'); // إظهار زر الصوت بعد اكتمال التحميل
+                    audioDiv.classList.remove('hidden');
                 } else {
                     displayDiv.innerHTML = "حدث خطأ أثناء تحميل الآيات.";
                 }
-
             } catch (error) {
                 loadingDiv.classList.add('hidden');
                 displayDiv.innerHTML = "تعذر تحميل الآيات. يرجى التأكد من اتصال الإنترنت.";
@@ -274,7 +276,6 @@
             }
         }
 
-        // --- مشغل الصوت ---
         function toggleAudio() {
             const player = document.getElementById('audioPlayer');
             const btn = document.getElementById('playBtn');
@@ -313,7 +314,6 @@
             }
         };
 
-        // --- تحديث الواجهة ---
         function updateUserUI(state) {
             if (!myId) return; 
 
@@ -329,19 +329,15 @@
                 return;
             }
 
-            // --- تحديث عناوين وبيانات المصحف ---
-            // 1. العنوان
             const sName = surahNames[state.settings.surah] || "مختارة";
             document.getElementById('surahTitle').innerText = `سورة ${sName} - ${myReader.verses}`;
 
-            // 2. جلب البيانات (فقط إذا تغيرت الآيات أو لم يتم تحميلها)
             const currentHash = `${state.settings.surah}-${myReader.startV}-${myReader.endV}`;
             if (currentHash !== lastVersesHash) {
                 lastVersesHash = currentHash;
                 fetchQuranData(state.settings.surah, myReader.startV, myReader.endV);
             }
 
-            // --- منطق الطابور (الجديد والمصحح) ---
             if (myIndex < currentIndex && myIndex !== -1) {
                 alert("انتهى دورك، تقبل الله منك!");
                 location.reload();
@@ -354,13 +350,22 @@
             const diff = myIndex - currentIndex;
 
             roleBox.classList.remove('waiting', 'ready', 'active');
+            let currentStatus = ""; // لتتبع التغيير
 
             if (diff === 0) {
+                currentStatus = "active";
                 roleBox.classList.add('active');
                 statusText.innerText = "دورك الآن 🎤";
                 subStatus.innerText = "تفضلي بالقراءة";
-                if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+                
+                // 🔥 الميزة الجديدة: إذا تغيرت الحالة إلى أخضر، اصعد للأعلى 🔥
+                if (lastStatus !== "active") {
+                    if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+
             } else if (diff === 1) {
+                currentStatus = "ready";
                 roleBox.classList.add('ready');
                 if (currentIndex === -1) {
                     statusText.innerText = "أنتِ القارئة الأولى";
@@ -370,10 +375,13 @@
                     subStatus.innerText = "أنتِ القارئة التالية";
                 }
             } else {
+                currentStatus = "waiting";
                 roleBox.classList.add('waiting');
                 statusText.innerText = "انتظار";
                 subStatus.innerText = `يسبقك في الانتظار: ${diff - 1} قارئات`;
             }
+            
+            lastStatus = currentStatus; // تحديث الحالة المحفوظة
         }
 
         window.onload = function() {
