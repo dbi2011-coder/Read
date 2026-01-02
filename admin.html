@@ -3,14 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إدارة المقرأة (محلي)</title>
+    <title>إدارة المقرأة (المشرفة)</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* إصلاح سريع للتأكد من أن العناصر مخفية */
+        .hidden { display: none !important; }
+    </style>
 </head>
 <body>
 
     <div class="container" id="loginScreen">
-        <h2>تسجيل دخول المشرف</h2>
-        <input type="password" id="adminPass" placeholder="الرقم السري">
+        <h2>تسجيل دخول المشرفة</h2>
+        <input type="password" id="adminPass" placeholder="الرقم السري (1234)">
         <button onclick="handleLogin()">دخول</button>
     </div>
 
@@ -39,12 +43,12 @@
     <div class="container hidden" id="dashboardScreen">
         <div style="display: flex; justify-content: space-between;">
             <span id="waitingCount">المتبقي: 0</span>
-            <button class="btn-danger" id="stopBookingBtn" onclick="toggleBooking()">تحميل...</button>
+            <button class="btn-danger" id="stopBookingBtn" onclick="handleToggleBooking()">تحميل...</button>
         </div>
 
-        <button class="big-circle-btn" onclick="nextReader()">القارئة التالية ⏩</button>
+        <button class="big-circle-btn" onclick="handleNextReader()">القارئة التالية ⏩</button>
         
-        <div id="currentReaderDisplay" style="margin: 20px 0; font-weight: bold; color: var(--primary-color);">
+        <div id="currentReaderDisplay" style="margin: 20px 0; font-weight: bold; color: #00796b;">
             ...
         </div>
 
@@ -60,40 +64,88 @@
         </div>
     </div>
 
-    <script src="logic.js"></script>
     <script>
-        // --- تهيئة الصفحة ---
-        
-        // تعبئة السور
-        const surahSelect = document.getElementById('surahNum');
-        const surahs = getSurahList();
-        for (let i = 1; i < surahs.length; i++) {
-            const option = document.createElement('option');
-            option.value = i;
-            option.text = `${i}. ${surahs[i]}`;
-            surahSelect.appendChild(option);
+        // --- 1. البيانات والثوابت ---
+        const STORAGE_KEY = 'quran_queue_offline_v3';
+        const surahNames = [
+            "", "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", 
+            "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه", 
+            "الأنبياء", "الحج", "المؤمنون", "النور", "الفرقان", "الشعراء", "النمل", "القصص", "العنكبوت", "الروم", 
+            "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر", 
+            "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق", 
+            "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر", "الممتحنة", 
+            "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج", 
+            "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس", 
+            "التكوير", "الإنفطار", "المطففين", "الإنشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", 
+            "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", 
+            "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", 
+            "المسد", "الإخلاص", "الفلق", "الناس"
+        ];
+
+        // --- 2. دوال النظام الأساسية ---
+        function getState() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            return data ? JSON.parse(data) : {
+                settings: { surah: 1, startVerse: 1, amountType: 'verses', amountValue: 5 },
+                queue: [],
+                currentReaderIndex: -1,
+                isBookingStopped: false
+            };
         }
-        surahSelect.value = 2; 
+
+        function saveState(state) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            updateDashboardUI(state); // تحديث فوري للشاشة
+        }
+
+        function calculateVersesBlock(startFrom, amountType, amountValue) {
+            let start = parseInt(startFrom); 
+            let end = start;
+            if (amountType === 'verses') end = start + parseInt(amountValue) - 1;
+            else if (amountType === 'quarter') end = start + 7; 
+            else if (amountType === 'half') end = start + 14; 
+            else if (amountType === 'full') end = start + 28; 
+            return { start, end, text: `من آية ${start} إلى ${end}` };
+        }
+
+        function recalculateQueueVerses(state) {
+            if (!state.queue) state.queue = [];
+            let nextStartVerse = state.settings.startVerse;
+            if (state.currentReaderIndex >= 0 && state.queue[state.currentReaderIndex]) {
+                nextStartVerse = state.queue[state.currentReaderIndex].endV + 1;
+            } 
+            for (let i = state.currentReaderIndex + 1; i < state.queue.length; i++) {
+                const info = calculateVersesBlock(nextStartVerse, state.settings.amountType, state.settings.amountValue);
+                state.queue[i].startV = info.start;
+                state.queue[i].endV = info.end;
+                state.queue[i].verses = info.text;
+                nextStartVerse = info.end + 1;
+            }
+            return state;
+        }
+
+        // --- 3. دوال التفاعل (الأزرار) ---
+        function handleLogin() {
+            const pass = document.getElementById('adminPass').value;
+            if (pass === "1234") {
+                document.getElementById('loginScreen').classList.add('hidden');
+                
+                // التأكد هل توجد جلسة سابقة؟
+                const state = getState();
+                if (state.queue && state.queue.length > 0) {
+                    document.getElementById('dashboardScreen').classList.remove('hidden');
+                    updateDashboardUI(state);
+                } else {
+                    document.getElementById('setupScreen').classList.remove('hidden');
+                }
+            } else {
+                alert('كلمة المرور خاطئة');
+            }
+        }
 
         function toggleAmountInput() {
             const val = document.getElementById('amountType').value;
             document.getElementById('amountValue').style.display = (val === 'verses') ? 'block' : 'none';
-        }
-
-        function toggleTable() {
-            document.getElementById('readersTableContainer').classList.toggle('hidden');
-        }
-
-        // --- المنطق ---
-
-        function handleLogin() {
-            const pass = document.getElementById('adminPass').value;
-            if (checkAdminPass(pass)) {
-                document.getElementById('loginScreen').classList.add('hidden');
-                document.getElementById('setupScreen').classList.remove('hidden');
-            } else {
-                alert('خطأ في الرمز');
-            }
         }
 
         function handleStartSession() {
@@ -102,31 +154,70 @@
             const type = document.getElementById('amountType').value;
             const val = document.getElementById('amountValue').value || 5;
             
-            initSession(surah, startV, type, val);
+            const state = {
+                settings: { surah, startVerse: parseInt(startV), amountType: type, amountValue: val },
+                queue: [],
+                currentReaderIndex: -1,
+                isBookingStopped: false
+            };
+            saveState(state);
             
             document.getElementById('setupScreen').classList.add('hidden');
             document.getElementById('dashboardScreen').classList.remove('hidden');
         }
 
-        // --- الاستماع للتحديثات ---
-        startListener((state) => {
+        function handleNextReader() {
+            let state = getState();
+            if (state.queue.length > state.currentReaderIndex + 1) {
+                state.currentReaderIndex++;
+                saveState(state);
+            } else {
+                alert("لا يوجد قارئات تاليات!");
+            }
+        }
+
+        function handleToggleBooking() {
+            let state = getState();
+            state.isBookingStopped = !state.isBookingStopped;
+            saveState(state);
+        }
+
+        function deleteReader(index) {
+            let state = getState();
+            state.queue.splice(index, 1);
+            if (index < state.currentReaderIndex) state.currentReaderIndex--;
+            else state = recalculateQueueVerses(state);
+            saveState(state);
+        }
+
+        function makeUrgent(index) {
+            let state = getState();
+            if (index > state.currentReaderIndex + 1) {
+                const reader = state.queue.splice(index, 1)[0]; 
+                state.queue.splice(state.currentReaderIndex + 1, 0, reader);
+                state = recalculateQueueVerses(state);
+                saveState(state);
+            }
+        }
+
+        function toggleTable() {
+            document.getElementById('readersTableContainer').classList.toggle('hidden');
+        }
+
+        // --- 4. تحديث الشاشة (UI) ---
+        function updateDashboardUI(state) {
             if(!state) return;
 
-            document.getElementById('loginScreen').classList.add('hidden');
-            // إذا كانت هناك جلسة نشطة، انتقل للوحة التحكم
-            if (state.queue && (state.queue.length > 0 || state.currentReaderIndex > -1)) {
-                document.getElementById('setupScreen').classList.add('hidden');
-                document.getElementById('dashboardScreen').classList.remove('hidden');
-            }
-
-            // تحديث الواجهة
+            // زر الإيقاف
             const btnStop = document.getElementById('stopBookingBtn');
             btnStop.innerText = state.isBookingStopped ? "فتح الحجز" : "إيقاف الحجز";
             btnStop.style.backgroundColor = state.isBookingStopped ? "#4CAF50" : "#d32f2f";
 
+            // العداد
             const remaining = (state.queue ? state.queue.length : 0) - (state.currentReaderIndex + 1);
             document.getElementById('waitingCount').innerText = `المتبقي: ${remaining > 0 ? remaining : 0}`;
 
+            // القارئة الحالية
             if (state.queue && state.currentReaderIndex >= 0 && state.currentReaderIndex < state.queue.length) {
                 const curr = state.queue[state.currentReaderIndex];
                 document.getElementById('currentReaderDisplay').innerText = `تقرأ الآن: ${curr.name} (${curr.verses})`;
@@ -153,7 +244,30 @@
                     }
                 });
             }
-        });
+        }
+
+        // --- 5. التشغيل الأولي ---
+        window.onload = function() {
+            // تعبئة السور
+            const surahSelect = document.getElementById('surahNum');
+            for (let i = 1; i < surahNames.length; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.text = `${i}. ${surahNames[i]}`;
+                surahSelect.appendChild(option);
+            }
+            surahSelect.value = 2; // البقرة
+
+            // الاستماع لتغييرات من صفحة القارئات
+            window.addEventListener('storage', (e) => {
+                if (e.key === STORAGE_KEY) {
+                    updateDashboardUI(JSON.parse(e.newValue));
+                }
+            });
+            
+            // استرجاع آخر حالة
+            updateDashboardUI(getState());
+        };
     </script>
 </body>
 </html>
