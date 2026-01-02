@@ -8,7 +8,6 @@
     <style>
         .hidden { display: none !important; }
         
-        /* تصميم صندوق الآيات */
         .verses-box {
             background: #e8f5e9;
             padding: 20px;
@@ -91,7 +90,6 @@
 
         function getState() {
             const data = localStorage.getItem(STORAGE_KEY);
-            // التأكد من وجود إعدادات افتراضية لتجنب الأخطاء
             return data ? JSON.parse(data) : { settings: {surah: 1}, queue: [], currentReaderIndex: -1, isBookingStopped: false };
         }
 
@@ -111,13 +109,9 @@
 
         function recalculateQueueVerses(state) {
             if (!state.queue) state.queue = [];
-            
-            // التأكد من وجود الإعدادات
             if(!state.settings) state.settings = { surah: 1, startVerse: 1, amountType: 'verses', amountValue: 5 };
 
             let nextStartVerse = state.settings.startVerse;
-            
-            // البدء من بعد القارئة الحالية
             if (state.currentReaderIndex >= 0 && state.queue[state.currentReaderIndex]) {
                 nextStartVerse = state.queue[state.currentReaderIndex].endV + 1;
             } 
@@ -141,57 +135,44 @@
                 return;
             }
 
-            // 1. معالجة الاسم (اختياري)
             const nameInput = document.getElementById('readerName');
             let name = nameInput.value.trim();
-            
-            // إذا كان الاسم فارغاً، نضع اسماً افتراضياً
             if (!name) {
                 const nextNum = (state.queue ? state.queue.length : 0) + 1;
                 name = `قارئة ${nextNum}`;
             }
 
-            // 2. إنشاء القارئة
             if (!state.queue) state.queue = [];
             
             const newReader = {
                 id: Date.now(), 
                 name: name,
-                verses: "...", // سيحسب الآن
-                surah: "", // سيحسب الآن
+                verses: "...", 
+                surah: "", 
                 startV: 0,
                 endV: 0
             };
 
             state.queue.push(newReader);
-            
-            // 3. حساب الآيات
             state = recalculateQueueVerses(state);
-            
-            // حفظ
             saveState(state);
 
-            // تحديد القارئة الحالية (أنا)
             myId = newReader.id;
             
-            // 4. الانتقال للشاشة التالية وتحديث البيانات فوراً
             document.getElementById('bookingScreen').classList.add('hidden');
             document.getElementById('statusScreen').classList.remove('hidden');
             document.getElementById('welcomeName').innerText = `أهلاً بك: ${name}`;
             
-            // تحديث الآيات فوراً (الحل لمشكلة عدم الظهور)
             updateUserUI(state);
         }
 
         function updateUserUI(state) {
             if (!myId) return; 
 
-            // البحث عن بياناتي في الطابور المحدث
             const myReader = state.queue ? state.queue.find(r => r.id === myId) : null;
             const myIndex = state.queue ? state.queue.findIndex(r => r.id === myId) : -1;
-            const currentIndex = state.currentReaderIndex;
+            const currentIndex = state.currentReaderIndex; // يبدأ من -1
 
-            // إذا تم حذفي
             if (!myReader) {
                 if (!document.getElementById('statusScreen').classList.contains('hidden')) {
                     alert("تم إزالة الحجز.");
@@ -200,50 +181,67 @@
                 return;
             }
 
-            // --- تحديث الآيات ---
-            // نستخدم رقم السورة المحفوظ في الإعدادات لجلب الاسم
             let surahNameText = "سورة مختارة";
             if (state.settings && state.settings.surah) {
                 surahNameText = `سورة ${surahNames[state.settings.surah]}`;
             }
-            
             document.getElementById('surahInfo').innerText = surahNameText;
             document.getElementById('assignedVerses').innerText = myReader.verses;
-            // ---------------------
 
-            // هل انتهى الدور؟
             if (myIndex < currentIndex && myIndex !== -1) {
                 alert("انتهى دورك، تقبل الله منك!");
                 location.reload();
                 return;
             }
 
-            // تحديث الألوان والحالة
+            // --- 🔥 منطق الرسائل الجديد 🔥 ---
             const roleBox = document.getElementById('roleBox');
             const statusText = document.getElementById('statusText');
             const subStatus = document.getElementById('subStatus');
-            const peopleBeforeMe = myIndex - currentIndex;
+            
+            // حساب الفرق بين دوري ودور المشرفة
+            const diff = myIndex - currentIndex;
 
             roleBox.classList.remove('waiting', 'ready', 'active');
 
-            if (peopleBeforeMe === 0) {
+            if (diff === 0) {
+                // دوري الآن (المشرفة تقف عندي)
                 roleBox.classList.add('active');
                 statusText.innerText = "دورك الآن 🎤";
                 subStatus.innerText = "تفضلي بالقراءة";
                 if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
-            } else if (peopleBeforeMe === 1) {
+            
+            } else if (diff === 1) {
+                // أنا التالية
                 roleBox.classList.add('ready');
-                statusText.innerText = "استعدي..";
-                subStatus.innerText = "أنتِ القارئة التالية";
+                
+                // حالة خاصة: إذا كانت المشرفة لم تبدأ بعد (currentIndex = -1) وأنا رقم 0
+                // أو إذا كانت المشرفة تقف عند شخص وأنا بعده
+                
+                if (currentIndex === -1) {
+                    // أنا الأولى في الطابور والمشرفة لم تضغط بدء
+                    statusText.innerText = "أنتِ القارئة الأولى";
+                    subStatus.innerText = "بانتظار بدء المشرفة للجلسة...";
+                } else {
+                    // هناك شخص يقرأ وأنا بعده
+                    statusText.innerText = "استعدي..";
+                    subStatus.innerText = "أنتِ القارئة التالية";
+                }
+                
             } else {
+                // انتظار (يوجد ناس قبلي)
                 roleBox.classList.add('waiting');
                 statusText.innerText = "انتظار";
-                subStatus.innerText = `يسبقك ${peopleBeforeMe} قارئات`;
+                
+                // التعديل: حساب عدد المنتظرين أمامي فقط (بدون احتساب من يقرأ الآن)
+                // المعادلة: (ترتيبي) - (ترتيب اللي يقرأ) - 1
+                const waitingAhead = diff - 1;
+                
+                subStatus.innerText = `يسبقك في الانتظار: ${waitingAhead} قارئات`;
             }
         }
 
         window.onload = function() {
-            // الاستماع لتغييرات الأدمن
             window.addEventListener('storage', (e) => {
                 if (e.key === STORAGE_KEY) {
                     updateUserUI(JSON.parse(e.newValue));
