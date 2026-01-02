@@ -5,74 +5,199 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مقرأة التلاوة</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .hidden { display: none !important; }
+        
+        /* تحسين مظهر صندوق الآيات للقارئة */
+        .verses-box {
+            background: #e8f5e9; /* خلفية خضراء فاتحة جداً */
+            padding: 20px;
+            border-radius: 15px;
+            border-right: 5px solid #2e7d32; /* خط جانبي جمالي */
+            margin-bottom: 25px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .verses-box h3 {
+            color: #1b5e20;
+            margin-top: 0;
+            font-size: 16px;
+        }
+
+        #assignedVerses {
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+            margin: 10px 0;
+        }
+
+        #surahInfo {
+            color: #555;
+            font-size: 18px;
+        }
+    </style>
 </head>
 <body>
 
     <div class="container" id="bookingScreen">
         <h1>حجز دور للتلاوة 📖</h1>
-        <input type="text" id="readerName" placeholder="اكتبي اسمك (اختياري)">
+        <p style="color: #666; margin-bottom: 20px;">سجلي اسمك للانضمام للطابور</p>
+        
+        <input type="text" id="readerName" placeholder="اكتبي اسمك هنا">
         <button class="big-circle-btn" onclick="handleBook()">حجز دور</button>
         <p id="errorMsg" style="color: red;"></p>
     </div>
 
     <div class="container hidden" id="statusScreen">
-        <h2 id="welcomeName">...</h2>
+        <h2 id="welcomeName" style="color: #00796b;">...</h2>
         
         <div class="verses-box">
-            <h3>الآيات المخصصة لك:</h3>
-            <p id="assignedVerses" style="font-size: 20px; font-weight: bold; color: var(--primary-color);">...</p>
-            <p id="surahInfo" style="color: #666;">...</p>
+            <h3>📖 الآيات المخصصة لك:</h3>
+            <p id="surahInfo">...</p>
+            <p id="assignedVerses">...</p>
         </div>
 
         <div id="roleBox" class="status-box waiting">
             <h1 id="statusText">...</h1>
             <p id="subStatus">...</p>
         </div>
+        
+        <button onclick="location.reload()" style="background:none; color:#999; border:none; margin-top:20px; font-size:12px; box-shadow:none;">تسجيل خروج</button>
     </div>
 
-    <script src="logic.js"></script>
     <script>
+        const STORAGE_KEY = 'quran_queue_offline_v3';
         let myId = null;
 
-        function handleBook() {
-            const name = document.getElementById('readerName').value;
-            const result = bookRole(name);
-            
-            if (result.success) {
-                myId = result.readerId;
-                document.getElementById('bookingScreen').classList.add('hidden');
-                document.getElementById('statusScreen').classList.remove('hidden');
-                document.getElementById('welcomeName').innerText = `أهلاً بك: ${result.details.name}`;
-            } else {
-                document.getElementById('errorMsg').innerText = result.msg;
-            }
+        const surahNames = [
+            "", "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", 
+            "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه", 
+            "الأنبياء", "الحج", "المؤمنون", "النور", "الفرقان", "الشعراء", "النمل", "القصص", "العنكبوت", "الروم", 
+            "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر", 
+            "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق", 
+            "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر", "الممتحنة", 
+            "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج", 
+            "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس", 
+            "التكوير", "الإنفطار", "المطففين", "الإنشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", 
+            "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", 
+            "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", 
+            "المسد", "الإخلاص", "الفلق", "الناس"
+        ];
+
+        // --- دوال المساعدة ---
+        function getState() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            return data ? JSON.parse(data) : { settings: {}, queue: [], currentReaderIndex: -1, isBookingStopped: false };
         }
 
-        // الاستماع للتحديثات
-        startListener((state) => {
+        function saveState(state) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function calculateVersesBlock(startFrom, amountType, amountValue) {
+            let start = parseInt(startFrom); 
+            let end = start;
+            if (amountType === 'verses') end = start + parseInt(amountValue) - 1;
+            else if (amountType === 'quarter') end = start + 7; 
+            else if (amountType === 'half') end = start + 14; 
+            else if (amountType === 'full') end = start + 28; 
+            return { start, end, text: `من آية ${start} إلى ${end}` };
+        }
+
+        function recalculateQueueVerses(state) {
+            if (!state.queue) state.queue = [];
+            let nextStartVerse = state.settings.startVerse;
+            if (state.currentReaderIndex >= 0 && state.queue[state.currentReaderIndex]) {
+                nextStartVerse = state.queue[state.currentReaderIndex].endV + 1;
+            } 
+            for (let i = state.currentReaderIndex + 1; i < state.queue.length; i++) {
+                const info = calculateVersesBlock(nextStartVerse, state.settings.amountType, state.settings.amountValue);
+                state.queue[i].startV = info.start;
+                state.queue[i].endV = info.end;
+                state.queue[i].verses = info.text;
+                nextStartVerse = info.end + 1;
+            }
+            return state;
+        }
+
+        // --- دالة الحجز ---
+        function handleBook() {
+            const nameInput = document.getElementById('readerName');
+            const name = nameInput.value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+
+            if (!name) {
+                errorMsg.innerText = "الرجاء كتابة الاسم";
+                return;
+            }
+
+            let state = getState();
+
+            if (state.isBookingStopped) {
+                errorMsg.innerText = "نعتذر منك، الحجز متوقف حالياً لاكتمال العدد.";
+                return;
+            }
+
+            // إضافة القارئة
+            const newReader = {
+                id: Date.now(), 
+                name: name,
+                verses: "...", 
+                surah: surahNames[state.settings.surah] || "سورة مختارة",
+                startV: 0,
+                endV: 0
+            };
+
+            if (!state.queue) state.queue = [];
+            state.queue.push(newReader);
+            
+            // حساب الآيات
+            state = recalculateQueueVerses(state);
+            saveState(state);
+
+            // نجاح الحجز
+            myId = newReader.id;
+            
+            // إخفاء شاشة الحجز وإظهار شاشة الحالة
+            document.getElementById('bookingScreen').classList.add('hidden');
+            document.getElementById('statusScreen').classList.remove('hidden');
+            document.getElementById('welcomeName').innerText = `أهلاً بك: ${newReader.name}`;
+            
+            // تحديث البيانات فوراً
+            updateUserUI(state);
+        }
+
+        // --- تحديث الواجهة ---
+        function updateUserUI(state) {
             if (!myId) return; 
 
             const myReader = state.queue ? state.queue.find(r => r.id === myId) : null;
             const myIndex = state.queue ? state.queue.findIndex(r => r.id === myId) : -1;
             const currentIndex = state.currentReaderIndex;
 
+            // 1. حالة الطرد/الحذف
             if (!myReader) {
-                if (document.getElementById('statusScreen').classList.contains('hidden') === false) {
+                if (!document.getElementById('statusScreen').classList.contains('hidden')) {
                     alert("تم إزالة الحجز.");
                     location.reload();
                 }
                 return;
             }
 
+            // 2. تحديث الآيات (مهم جداً يظهر اسم السورة ورقم الآيات)
+            // نأخذ اسم السورة من رقم السورة المحفوظ في الإعدادات
+            const sName = surahNames[state.settings.surah] || "سورة";
+            document.getElementById('surahInfo').innerText = `سورة ${sName}`;
             document.getElementById('assignedVerses').innerText = myReader.verses;
-            document.getElementById('surahInfo').innerText = myReader.surah;
 
+            // 3. هل انتهى الدور؟
             if (myIndex < currentIndex && myIndex !== -1) {
                 alert("انتهى دورك، تقبل الله منك!");
                 location.reload();
                 return;
             }
 
+            // 4. حالة الدور (ألوان)
             const roleBox = document.getElementById('roleBox');
             const statusText = document.getElementById('statusText');
             const subStatus = document.getElementById('subStatus');
@@ -94,7 +219,17 @@
                 statusText.innerText = "انتظار";
                 subStatus.innerText = `يسبقك ${peopleBeforeMe} قارئات`;
             }
-        });
+        }
+
+        // --- الاستماع للتحديثات ---
+        window.onload = function() {
+            // الاستماع لتغييرات الأدمن في التبويب الآخر
+            window.addEventListener('storage', (e) => {
+                if (e.key === STORAGE_KEY) {
+                    updateUserUI(JSON.parse(e.newValue));
+                }
+            });
+        };
     </script>
 </body>
 </html>
