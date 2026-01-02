@@ -11,154 +11,146 @@
     <div class="container" id="loginScreen">
         <h2>تسجيل دخول المشرف</h2>
         <input type="password" id="adminPass" placeholder="الرقم السري">
-        <button onclick="handleLogin()">دخول</button>
+        <button id="btnLogin">دخول</button>
     </div>
 
     <div class="container hidden" id="setupScreen">
         <h2>إعداد الجلسة</h2>
-        <label>رقم السورة (مثال: 2 للبقرة):</label>
-        <input type="number" id="surahNum" value="2">
+        
+        <label>اختيار السورة:</label>
+        <select id="surahNum"></select>
         
         <label>بداية من آية:</label>
         <input type="number" id="startVerse" value="1">
-
-        <label>كمية القراءة:</label>
-        <select id="amountType" onchange="toggleAmountInput()">
+        
+        <label>الكمية للقارئة الواحدة:</label>
+        <select id="amountType">
             <option value="verses">عدد آيات محدد</option>
             <option value="quarter">ربع وجه</option>
             <option value="half">نصف وجه</option>
-        </select>
+            <option value="full">وجه كامل</option> </select>
         
-        <input type="number" id="amountValue" placeholder="عدد الآيات (مثلا 5)">
+        <input type="number" id="amountValue" placeholder="عدد الآيات (في حال اخترت آيات محددة)">
         
-        <button onclick="startSession()">استمرار وبدء الجلسة</button>
+        <button id="btnStart">بدء الجلسة</button>
     </div>
 
     <div class="container hidden" id="dashboardScreen">
         <div style="display: flex; justify-content: space-between;">
             <span id="waitingCount">المتبقي: 0</span>
-            <button class="btn-danger" id="stopBookingBtn" onclick="toggleStopBooking()">إيقاف الحجز</button>
+            <button class="btn-danger" id="stopBookingBtn">تحميل...</button>
         </div>
 
-        <button class="big-circle-btn" onclick="nextRole()">القارئة التالية ⏩</button>
+        <button class="big-circle-btn" id="btnNext">القارئة التالية ⏩</button>
         
         <div id="currentReaderDisplay" style="margin: 20px 0; font-weight: bold; color: var(--primary-color);">
-            لا يوجد قارئة حالياً
+            ...
         </div>
 
-        <button class="btn-secondary" onclick="toggleTable()">إدارة القارئات 📋</button>
+        <button class="btn-secondary" onclick="document.getElementById('readersTableContainer').classList.toggle('hidden')">
+            إدارة القارئات 📋
+        </button>
         
         <div id="readersTableContainer" class="hidden">
             <table id="readersTable">
                 <thead>
-                    <tr>
-                        <th>الاسم</th>
-                        <th>الدور</th>
-                        <th>الآيات</th>
-                        <th>إجراءات</th>
-                    </tr>
+                    <tr><th>الاسم</th><th>الدور</th><th>الآيات</th><th>إجراءات</th></tr>
                 </thead>
-                <tbody>
-                    </tbody>
+                <tbody></tbody>
             </table>
         </div>
     </div>
 
-    <script src="logic.js"></script>
-    <script>
-        // منطق صفحة الادارة
-        let refreshInterval;
+    <script type="module">
+        import { initSession, nextReader, toggleBooking, deleteReader, makeUrgent, listenToData, checkAdminPass, getSurahList } from './logic.js';
 
-        function handleLogin() {
+        // --- تعبئة قائمة السور ---
+        const surahSelect = document.getElementById('surahNum');
+        const surahs = getSurahList();
+        
+        for (let i = 1; i < surahs.length; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.text = `${i}. ${surahs[i]}`;
+            surahSelect.appendChild(option);
+        }
+        surahSelect.value = 2; // البقرة افتراضياً
+
+        // --- إخفاء حقل العدد إذا لم يختر "عدد آيات" ---
+        document.getElementById('amountType').addEventListener('change', (e) => {
+             const input = document.getElementById('amountValue');
+             input.style.display = (e.target.value === 'verses') ? 'block' : 'none';
+        });
+
+        // 1. Login
+        document.getElementById('btnLogin').onclick = () => {
             const pass = document.getElementById('adminPass').value;
-            if (adminLogin(pass)) {
+            if (checkAdminPass(pass)) {
                 document.getElementById('loginScreen').classList.add('hidden');
                 document.getElementById('setupScreen').classList.remove('hidden');
             } else {
-                alert('كلمة المرور خاطئة');
+                alert('خطأ في الرمز');
             }
-        }
+        };
 
-        function toggleAmountInput() {
-            const type = document.getElementById('amountType').value;
-            const input = document.getElementById('amountValue');
-            input.style.display = (type === 'verses') ? 'block' : 'none';
-        }
-
-        function startSession() {
+        // 2. Start Session
+        document.getElementById('btnStart').onclick = () => {
             const surah = document.getElementById('surahNum').value;
             const startV = document.getElementById('startVerse').value;
             const type = document.getElementById('amountType').value;
-            const val = document.getElementById('amountValue').value || 0; // 0 if hidden
-
+            const val = document.getElementById('amountValue').value || 5;
+            
             initSession(surah, startV, type, val);
-
+            
             document.getElementById('setupScreen').classList.add('hidden');
             document.getElementById('dashboardScreen').classList.remove('hidden');
-            
-            // تحديث دوري للشاشة
-            refreshDashboard();
-            refreshInterval = setInterval(refreshDashboard, 2000);
-        }
+        };
 
-        function nextRole() {
-            if(!nextReader()) {
-                alert("لا يوجد قارئات في الانتظار!");
-            }
-            refreshDashboard();
-        }
+        // 3. Dashboard Buttons
+        document.getElementById('btnNext').onclick = nextReader;
+        document.getElementById('stopBookingBtn').onclick = toggleBooking;
+        window.callDelete = (index) => deleteReader(index);
+        window.callUrgent = (index) => makeUrgent(index);
 
-        function toggleStopBooking() {
-            const state = getState();
-            toggleBooking(!state.isBookingStopped);
-            refreshDashboard();
-        }
+        // 4. Live Updates
+        listenToData((state) => {
+            document.getElementById('dashboardScreen').classList.remove('hidden');
+            document.getElementById('loginScreen').classList.add('hidden'); 
+            document.getElementById('setupScreen').classList.add('hidden');
 
-        function toggleTable() {
-            const table = document.getElementById('readersTableContainer');
-            table.classList.toggle('hidden');
-        }
-
-        function refreshDashboard() {
-            const state = getState();
-            
-            // زر الايقاف
             const btnStop = document.getElementById('stopBookingBtn');
             btnStop.innerText = state.isBookingStopped ? "فتح الحجز" : "إيقاف الحجز";
             btnStop.style.backgroundColor = state.isBookingStopped ? "#4CAF50" : "#d32f2f";
 
-            // العداد
-            const remaining = state.queue.length - (state.currentReaderIndex + 1);
+            const remaining = (state.queue ? state.queue.length : 0) - (state.currentReaderIndex + 1);
             document.getElementById('waitingCount').innerText = `المتبقي: ${remaining > 0 ? remaining : 0}`;
 
-            // القارئة الحالية
-            if (state.currentReaderIndex >= 0 && state.currentReaderIndex < state.queue.length) {
+            if (state.queue && state.currentReaderIndex >= 0 && state.currentReaderIndex < state.queue.length) {
                 const curr = state.queue[state.currentReaderIndex];
                 document.getElementById('currentReaderDisplay').innerText = `تقرأ الآن: ${curr.name} (${curr.verses})`;
             } else {
                 document.getElementById('currentReaderDisplay').innerText = "في انتظار البدء...";
             }
 
-            // الجدول
             const tbody = document.querySelector('#readersTable tbody');
             tbody.innerHTML = '';
-            
-            state.queue.forEach((reader, index) => {
-                // عرض فقط من لم ينته دورهم أو الحالية
-                if (index >= state.currentReaderIndex) {
-                    const row = `<tr>
-                        <td>${reader.name}</td>
-                        <td>${index + 1}</td>
-                        <td>${reader.verses}</td>
-                        <td>
-                            ${index > state.currentReaderIndex ? `<button class="btn-danger" style="padding:5px; font-size:12px" onclick="deleteReader(${index})">حذف</button>` : 'حالياً'}
-                            ${index > state.currentReaderIndex + 1 ? `<button style="padding:5px; font-size:12px" onclick="makeUrgent(${index})">مستعجلة</button>` : ''}
-                        </td>
-                    </tr>`;
-                    tbody.innerHTML += row;
-                }
-            });
-        }
+            if(state.queue) {
+                state.queue.forEach((reader, index) => {
+                    if (index >= state.currentReaderIndex) {
+                        const row = `<tr>
+                            <td>${reader.name}</td>
+                            <td>${index + 1}</td>
+                            <td>${reader.verses}</td>
+                            <td>
+                                ${index > state.currentReaderIndex ? `<button class="btn-danger" style="padding:5px" onclick="window.callDelete(${index})">حذف</button>` : 'حالياً'}
+                                ${index > state.currentReaderIndex + 1 ? `<button style="padding:5px" onclick="window.callUrgent(${index})">مستعجلة</button>` : ''}
+                            </td>
+                        </tr>`;
+                        tbody.innerHTML += row;
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>
