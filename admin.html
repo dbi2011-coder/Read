@@ -9,10 +9,9 @@
     <style>
         .hidden { display: none !important; }
         .btn-reset { background-color: #607d8b; margin-top: 20px; font-size: 14px; padding: 10px; }
-        /* مؤشر التحميل */
         .saving-indicator { position: fixed; top: 10px; left: 10px; background: #333; color: #fff; padding: 5px 10px; border-radius: 5px; font-size: 12px; display: none; z-index: 9999;}
         
-        /* تنسيق الإهداء في الأسفل */
+        /* تنسيق الإهداء */
         .footer-credits {
             margin-top: 40px;
             padding-top: 20px;
@@ -31,7 +30,6 @@
         <h2>تسجيل دخول المشرفة</h2>
         
         <input type="password" id="adminPass" placeholder="الرقم السري">
-        
         <button onclick="handleLogin()">دخول</button>
 
         <div class="footer-credits">
@@ -58,11 +56,12 @@
     </div>
 
     <div class="container hidden" id="dashboardScreen">
-        <div style="display: flex; justify-content: space-between;">
+        
+        <button class="btn-danger" id="stopBookingBtn" onclick="handleToggleBooking()" style="width: 100%; margin-bottom: 15px;">تحميل...</button>
+        
+        <div style="text-align: center; margin-bottom: 25px; font-weight: bold; color: #555;">
             <span id="waitingCount">المتبقي: 0</span>
-            <button class="btn-danger" id="stopBookingBtn" onclick="handleToggleBooking()">تحميل...</button>
         </div>
-
         <button class="big-circle-btn" onclick="handleNextReader()">القارئة التالية ⏩</button>
         
         <div id="currentReaderDisplay" style="margin: 20px 0; font-weight: bold; color: #00796b;">
@@ -83,6 +82,7 @@
     <script>
         const SUPABASE_URL = 'https://imvcqsgaovkbocvswifx.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdmNxc2dhb3ZrYm9jdnN3aWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjczNzM0MDgsImV4cCI6MjA4Mjk0OTQwOH0.8hb29-fMG7eSkPod3u3X6mE_w5uVsz-Wm2zqmjgnOgg';
+        
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const surahNames = ["", "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه", "الأنبياء", "الحج", "المؤمنون", "النور", "الفرقان", "الشعراء", "النمل", "القصص", "العنكبوت", "الروم", "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر", "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق", "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر", "الممتحنة", "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج", "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس", "التكوير", "الإنفطار", "المطففين", "الإنشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"];
@@ -115,6 +115,7 @@
         function recalculateQueueVerses(state) {
             if (!state.queue) state.queue = [];
             if (!state.settings) state.settings = { surah: 1, startVerse: 1, amountType: 'verses', amountValue: 5 };
+
             let pointer = { surah: state.settings.surah, verse: state.settings.startVerse };
 
             if (state.currentReaderIndex >= 0 && state.queue[state.currentReaderIndex]) {
@@ -132,6 +133,7 @@
             for (let i = state.currentReaderIndex + 1; i < state.queue.length; i++) {
                 if (pointer.surah > 114) pointer.surah = 1;
                 const maxVerses = surahVersesCount[pointer.surah];
+                
                 let amount = 0;
                 if (state.settings.amountType === 'verses') amount = parseInt(state.settings.amountValue);
                 else if (state.settings.amountType === 'quarter') amount = 8;
@@ -155,6 +157,7 @@
                 state.queue[i].startV = pointer.verse;
                 state.queue[i].endV = actualEnd;
                 state.queue[i].verses = `من ${pointer.verse} إلى ${actualEnd}`;
+
                 pointer.surah = nextPointerSurah;
                 pointer.verse = nextPointerVerse;
             }
@@ -163,7 +166,9 @@
 
         async function handleLogin() {
             const pass = document.getElementById('adminPass').value;
-            if (pass === "1234") {
+            if (pass === "1234" || pass === "") { // السماح بالدخول إذا كان الرقم 1234 (يمكنك إزالة || pass === "" لاحقاً لزيادة الأمان)
+                if(pass !== "1234") { alert("كلمة المرور خاطئة"); return; }
+                
                 document.getElementById('loginScreen').classList.add('hidden');
                 try {
                     const state = await getState();
@@ -192,11 +197,13 @@
             const startV = document.getElementById('startVerse').value;
             const type = document.getElementById('amountType').value;
             const val = document.getElementById('amountValue').value || 5;
+            
             const state = {
                 settings: { surah: parseInt(surah), startVerse: parseInt(startV), amountType: type, amountValue: val },
                 queue: [], currentReaderIndex: -1, isBookingStopped: false
             };
             await saveState(state);
+            
             document.getElementById('setupScreen').classList.add('hidden');
             document.getElementById('dashboardScreen').classList.remove('hidden');
         }
