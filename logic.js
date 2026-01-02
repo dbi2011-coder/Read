@@ -1,22 +1,9 @@
-// logic.js - الإصدار النهائي (وجه كامل + سور كاملة)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+// logic.js - الإصدار المحلي (Local Storage)
+// يعمل بدون إنترنت وبدون سيرفر
 
-// 🔴🔴 استبدل هذا الجزء ببياناتك من موقع فايربيس 🔴🔴
-const firebaseConfig = {
-    apiKey: "AIzaSyD...", 
-    authDomain: "....firebaseapp.com",
-    databaseURL: "https://....firebasedatabase.app",
-    projectId: "...",
-    storageBucket: "...",
-    messagingSenderId: "...",
-    appId: "..."
-};
+const STORAGE_KEY = 'quran_queue_offline_v3';
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-// قائمة السور الكاملة (114 سورة)
+// قائمة السور الكاملة
 const surahNames = [
     "", "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", 
     "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه", 
@@ -32,25 +19,44 @@ const surahNames = [
     "المسد", "الإخلاص", "الفلق", "الناس"
 ];
 
-// دالة تصدير قائمة السور للصفحة
-export function getSurahList() {
+// الحالة الافتراضية
+const defaultState = {
+    settings: { surah: 1, startVerse: 1, amountType: 'verses', amountValue: 5 },
+    queue: [],
+    currentReaderIndex: -1,
+    isBookingStopped: false
+};
+
+// --- دوال مساعدة للتخزين ---
+function getState() {
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : defaultState;
+}
+
+function saveState(state) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // إجبار تحديث الواجهة في نفس الصفحة
+    if (window.onStateChange) window.onStateChange(state);
+}
+
+// دالة لجلب قائمة السور (للاستخدام في HTML)
+function getSurahList() {
     return surahNames;
 }
 
-// --- الحسابات (تم إضافة الوجه الكامل) ---
+// --- الحسابات ---
 function calculateVersesBlock(startFrom, amountType, amountValue) {
     let start = parseInt(startFrom); 
     let end = start;
     
-    // تقدير عدد الآيات (تقريبي للمحاكاة)
     if (amountType === 'verses') {
         end = start + parseInt(amountValue) - 1;
     } else if (amountType === 'quarter') {
-        end = start + 7;  // ربع وجه تقريبا 8 آيات
+        end = start + 7; 
     } else if (amountType === 'half') {
-        end = start + 14; // نصف وجه تقريبا 15 آية
+        end = start + 14; 
     } else if (amountType === 'full') {
-        end = start + 28; // وجه كامل تقريبا 29 آية
+        end = start + 28; // وجه كامل
     }
     
     return { start, end, text: `من آية ${start} إلى ${end}` };
@@ -74,108 +80,99 @@ function recalculateQueueVerses(state) {
     return state;
 }
 
-// --- دوال الاستماع والتحديث ---
-export function listenToData(callback) {
-    const sessionRef = ref(db, 'session');
-    onValue(sessionRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) callback(data);
+// --- دوال الاستماع (مهمة جداً للمزامنة بين التبويبات) ---
+function startListener(callback) {
+    // 1. الاستماع لتغييرات localStorage من التبويبات الأخرى
+    window.addEventListener('storage', (e) => {
+        if (e.key === STORAGE_KEY) {
+            callback(JSON.parse(e.newValue));
+        }
     });
+
+    // 2. تسجيل دالة التحديث للصفحة الحالية
+    window.onStateChange = callback;
+
+    // 3. استدعاء أولي
+    callback(getState());
 }
 
 // --- دوال المشرف ---
-export function checkAdminPass(input) {
+function checkAdminPass(input) {
     return input === "1234"; 
 }
 
-export function initSession(surah, startVerse, type, value) {
-    const initialState = {
+function initSession(surah, startVerse, type, value) {
+    let state = getState();
+    state = {
         settings: { surah, startVerse: parseInt(startVerse), amountType: type, amountValue: value },
         queue: [],
         currentReaderIndex: -1,
         isBookingStopped: false
     };
-    set(ref(db, 'session'), initialState);
+    saveState(state);
 }
 
-export function nextReader() {
-    const sessionRef = ref(db, 'session');
-    get(sessionRef).then((snapshot) => {
-        let state = snapshot.val();
-        if (state && state.queue && state.queue.length > state.currentReaderIndex + 1) {
-            state.currentReaderIndex++;
-            set(sessionRef, state);
-        }
-    });
+function nextReader() {
+    let state = getState();
+    if (state.queue && state.queue.length > state.currentReaderIndex + 1) {
+        state.currentReaderIndex++;
+        saveState(state);
+    }
 }
 
-export function toggleBooking() {
-    const sessionRef = ref(db, 'session');
-    get(sessionRef).then((snapshot) => {
-        let state = snapshot.val();
-        if (state) {
-            state.isBookingStopped = !state.isBookingStopped;
-            set(sessionRef, state);
-        }
-    });
+function toggleBooking() {
+    let state = getState();
+    state.isBookingStopped = !state.isBookingStopped;
+    saveState(state);
 }
 
-export function deleteReader(index) {
-    const sessionRef = ref(db, 'session');
-    get(sessionRef).then((snapshot) => {
-        let state = snapshot.val();
-        if (state && state.queue) {
-            state.queue.splice(index, 1);
-            if (index < state.currentReaderIndex) {
-                state.currentReaderIndex--;
-            } else {
-                state = recalculateQueueVerses(state);
-            }
-            set(sessionRef, state);
-        }
-    });
-}
-
-export function makeUrgent(index) {
-    const sessionRef = ref(db, 'session');
-    get(sessionRef).then((snapshot) => {
-        let state = snapshot.val();
-        if (state && state.queue && index > state.currentReaderIndex + 1) {
-            const reader = state.queue.splice(index, 1)[0]; 
-            state.queue.splice(state.currentReaderIndex + 1, 0, reader);
+function deleteReader(index) {
+    let state = getState();
+    if (state.queue) {
+        state.queue.splice(index, 1);
+        if (index < state.currentReaderIndex) {
+            state.currentReaderIndex--;
+        } else {
             state = recalculateQueueVerses(state);
-            set(sessionRef, state);
         }
-    });
+        saveState(state);
+    }
+}
+
+function makeUrgent(index) {
+    let state = getState();
+    if (state.queue && index > state.currentReaderIndex + 1) {
+        const reader = state.queue.splice(index, 1)[0]; 
+        state.queue.splice(state.currentReaderIndex + 1, 0, reader);
+        state = recalculateQueueVerses(state);
+        saveState(state);
+    }
 }
 
 // --- دوال القارئة ---
-export function bookRole(name) {
-    const sessionRef = ref(db, 'session');
-    return get(sessionRef).then((snapshot) => {
-        let state = snapshot.val();
-        
-        if (!state || state.isBookingStopped) {
-            return { success: false, msg: "نعتذر أختي الغالية، الحجز متوقف حالياً ⛔" };
-        }
+function bookRole(name) {
+    let state = getState();
+    
+    if (state.isBookingStopped) {
+        return { success: false, msg: "نعتذر أختي الغالية، الحجز متوقف حالياً ⛔" };
+    }
 
-        if (!state.queue) state.queue = [];
+    if (!state.queue) state.queue = [];
 
-        const newReader = {
-            id: Date.now(), 
-            name: name || `قارئة ${state.queue.length + 1}`,
-            verses: "...", 
-            surah: surahNames[state.settings.surah] || "سورة مختارة",
-            startV: 0,
-            endV: 0
-        };
+    const newReader = {
+        id: Date.now(), 
+        name: name || `قارئة ${state.queue.length + 1}`,
+        verses: "...", 
+        surah: surahNames[state.settings.surah] || "سورة مختارة",
+        startV: 0,
+        endV: 0
+    };
 
-        state.queue.push(newReader);
-        state = recalculateQueueVerses(state);
-        
-        return set(sessionRef, state).then(() => {
-            const updatedReader = state.queue[state.queue.length - 1];
-            return { success: true, readerId: updatedReader.id, details: updatedReader };
-        });
-    });
+    state.queue.push(newReader);
+    state = recalculateQueueVerses(state);
+    saveState(state);
+
+    // نرجع آخر قارئة (التي هي أنا)
+    const updatedReader = state.queue[state.queue.length - 1];
+    return { success: true, readerId: updatedReader.id, details: updatedReader };
 }
