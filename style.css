@@ -1,0 +1,106 @@
+/* style.css */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
+
+:root {
+    --bg-color: #f4f7f6;
+    --primary-color: #00796b; /* أخضر إسلامي */
+    --accent-color: #d32f2f; /* أحمر للحذف/الإيقاف */
+    --waiting-red: #ffcdd2;
+    --ready-orange: #ffcc80;
+    --active-green: #2e7d32; /* الخلفية الخضراء الغامقة */
+}
+
+body {
+    font-family: 'Tajawal', sans-serif;
+    direction: rtl;
+    background-color: var(--bg-color);
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+h1, h2 { color: #333; }
+
+/* عناصر التحكم */
+input, select, button {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 16px;
+}
+
+button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+button:hover { opacity: 0.9; }
+
+.btn-danger { background-color: var(--accent-color); }
+.btn-secondary { background-color: #607d8b; }
+
+/* الدائرة الكبيرة للمشرف */
+.big-circle-btn {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    font-size: 20px;
+    margin: 20px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+/* حالة القارئة */
+.status-box {
+    padding: 30px;
+    border-radius: 15px;
+    margin-top: 20px;
+    transition: background-color 0.5s ease;
+}
+
+.waiting { background-color: var(--waiting-red); color: #333; }
+.ready { background-color: var(--ready-orange); color: #333; }
+.active { 
+    background-color: var(--active-green); 
+    color: white; 
+    animation: flashBorder 1s infinite; /* الوميض */
+}
+
+@keyframes flashBorder {
+    0% { border: 5px solid yellow; }
+    50% { border: 5px solid transparent; }
+    100% { border: 5px solid yellow; }
+}
+
+.hidden { display: none; }
+
+/* الجدول */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+th, td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}

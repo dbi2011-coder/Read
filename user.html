@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مقرأة التلاوة</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container" id="bookingScreen">
+        <h1>حجز دور للتلاوة 📖</h1>
+        <input type="text" id="readerName" placeholder="اكتبي اسمك (اختياري)">
+        <button class="big-circle-btn" onclick="requestRole()">حجز دور</button>
+        <p id="errorMsg" style="color: red;"></p>
+    </div>
+
+    <div class="container hidden" id="statusScreen">
+        <h2 id="welcomeName">أهلاً بك</h2>
+        
+        <div style="background: #fff3e0; padding: 15px; border-radius: 10px; border: 1px solid #ffb74d;">
+            <h3>الآيات المخصصة لك:</h3>
+            <p id="assignedVerses" style="font-size: 18px; font-weight: bold;">...</p>
+            <p id="surahInfo">...</p>
+            
+            <button onclick="playAudio()" style="background: #333; width: auto; padding: 5px 20px;">
+                🎧 استماع (الحذيفي)
+            </button>
+            <audio id="audioPlayer" src=""></audio>
+        </div>
+
+        <div id="roleBox" class="status-box waiting">
+            <h1 id="statusText">...</h1>
+            <p id="subStatus">دورك رقم: ...</p>
+        </div>
+
+    </div>
+
+    <script src="logic.js"></script>
+    <script>
+        let myId = null;
+        let checkInterval;
+
+        function requestRole() {
+            const name = document.getElementById('readerName').value;
+            const result = bookRole(name);
+
+            if (result.success) {
+                myId = result.readerId;
+                
+                // إعداد الواجهة
+                document.getElementById('bookingScreen').classList.add('hidden');
+                document.getElementById('statusScreen').classList.remove('hidden');
+                document.getElementById('welcomeName').innerText = `أهلاً بك: ${result.details.name}`;
+                document.getElementById('assignedVerses').innerText = result.details.verses;
+                document.getElementById('surahInfo').innerText = result.details.surah;
+
+                // إعداد رابط الصوت (تقريبي بناء على رقم الآية والسورة)
+                // يحتاج API دقيق، هنا مثال توضيحي لرابط
+                // const audioUrl = `https://verses.quran.com/hudhaify/mp3/00${state.settings.surah}${result.details.startV}.mp3`; 
+                // document.getElementById('audioPlayer').src = audioUrl;
+
+                startCheckingStatus();
+            } else {
+                document.getElementById('errorMsg').innerText = result.msg;
+            }
+        }
+
+        function playAudio() {
+            alert("سيتم تشغيل الصوت (يحتاج ربط برقم الآية الفعلي من API)");
+            // document.getElementById('audioPlayer').play();
+        }
+
+        function startCheckingStatus() {
+            checkInterval = setInterval(() => {
+                const state = getState();
+                
+                // البحث عن موقعي في الطابور
+                const myIndex = state.queue.findIndex(r => r.id === myId);
+                const currentIndex = state.currentReaderIndex;
+
+                const roleBox = document.getElementById('roleBox');
+                const statusText = document.getElementById('statusText');
+                const subStatus = document.getElementById('subStatus');
+
+                // 1. حالتي انتهت (مر دوري)
+                if (myIndex < currentIndex && myIndex !== -1) {
+                    alert("انتهى دورك، تقبل الله منك!");
+                    location.reload(); // العودة للبداية
+                    return;
+                }
+
+                // 2. أنا خارج الطابور (تم الحذف)
+                if (myIndex === -1) {
+                    alert("تم إزالة الحجز من قبل المشرفة.");
+                    location.reload();
+                    return;
+                }
+
+                // حساب كم باقي
+                const peopleBeforeMe = myIndex - currentIndex;
+
+                // منطق الألوان
+                roleBox.classList.remove('waiting', 'ready', 'active');
+
+                if (peopleBeforeMe === 0) {
+                    // دوري الآن!
+                    roleBox.classList.add('active');
+                    statusText.innerText = "دورك الآن 🎤";
+                    subStatus.innerText = "تفضلي بالقراءة";
+                    
+                    // اهتزاز
+                    if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+                    
+                } else if (peopleBeforeMe === 1) {
+                    // القارئة التالية
+                    roleBox.classList.add('ready');
+                    statusText.innerText = "استعدي..";
+                    subStatus.innerText = "أنتِ القارئة التالية";
+                } else {
+                    // انتظار
+                    roleBox.classList.add('waiting');
+                    statusText.innerText = "انتظار";
+                    subStatus.innerText = `يسبقك ${peopleBeforeMe} قارئات`;
+                }
+
+            }, 1000); // تحديث كل ثانية
+        }
+    </script>
+</body>
+</html>
