@@ -1,13 +1,24 @@
-/* style.css */
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
+/* style.css - نسخة الجوال المحسنة */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap');
 
 :root {
-    --bg-color: #f4f7f6;
-    --primary-color: #00796b; /* أخضر إسلامي */
-    --accent-color: #d32f2f; /* أحمر للحذف/الإيقاف */
-    --waiting-red: #ffcdd2;
-    --ready-orange: #ffcc80;
-    --active-green: #2e7d32; /* الخلفية الخضراء الغامقة */
+    --bg-color: #f0f2f5;
+    --primary-color: #00897b; /* أخضر مريح للعين */
+    --accent-color: #e53935; /* أحمر للتنبيه */
+    --text-color: #263238;
+    --white: #ffffff;
+    /* ألوان الحالة */
+    --waiting-bg: #ffebee;
+    --waiting-text: #c62828;
+    --ready-bg: #fff3e0;
+    --ready-text: #ef6c00;
+    --active-bg: #1b5e20; /* أخضر غامق جداً للدور */
+    --active-text: #ffffff;
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent; /* إزالة الوميض الأزرق عند اللمس في أندرويد */
 }
 
 body {
@@ -15,92 +26,183 @@ body {
     direction: rtl;
     background-color: var(--bg-color);
     margin: 0;
-    padding: 20px;
-    box-sizing: border-box;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* لكي لا يتوسط عمودياً بشكل مزعج */
 }
 
+/* الحاوية الرئيسية تشبه الكارت في التطبيقات */
 .container {
-    max-width: 600px;
-    margin: 0 auto;
-    background: white;
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    text-align: center;
-}
-
-h1, h2 { color: #333; }
-
-/* عناصر التحكم */
-input, select, button {
     width: 100%;
-    padding: 12px;
-    margin: 10px 0;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    font-family: 'Tajawal', sans-serif;
-    font-size: 16px;
+    max-width: 500px; /* عرض مناسب للجوال */
+    background: var(--white);
+    margin: 15px;
+    padding: 25px 20px;
+    border-radius: 20px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    text-align: center;
+    min-height: 80vh; /* تأخذ مساحة الشاشة */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
 }
 
-button {
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
+h1, h2 {
+    color: var(--text-color);
+    margin-bottom: 20px;
+    font-weight: 900;
+}
+
+/* تحسين حقول الإدخال للمس */
+input, select {
+    width: 100%;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 12px;
+    border: 2px solid #eceff1;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 16px; /* حجم 16 يمنع الزوم التلقائي في الآيفون */
+    background: #fafafa;
     transition: 0.3s;
 }
 
-button:hover { opacity: 0.9; }
+input:focus, select:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    background: #fff;
+}
 
-.btn-danger { background-color: var(--accent-color); }
-.btn-secondary { background-color: #607d8b; }
+/* الأزرار العادية */
+button {
+    width: 100%;
+    padding: 16px;
+    margin: 12px 0;
+    border-radius: 12px;
+    border: none;
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,137,123, 0.3);
+    transition: transform 0.2s;
+}
 
-/* الدائرة الكبيرة للمشرف */
+button:active {
+    transform: scale(0.98); /* تأثير ضغطة الزر */
+}
+
+.btn-danger {
+    background-color: var(--accent-color);
+    box-shadow: 0 4px 6px rgba(229,57,53, 0.3);
+}
+
+.btn-secondary {
+    background-color: #546e7a;
+    box-shadow: 0 4px 6px rgba(84,110,122, 0.3);
+}
+
+/* الزر الدائري الكبير (زر القارئة التالية) */
 .big-circle-btn {
-    width: 150px;
-    height: 150px;
+    width: 180px;
+    height: 180px;
     border-radius: 50%;
-    font-size: 20px;
-    margin: 20px auto;
+    font-size: 24px;
+    margin: 30px auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    background: linear-gradient(135deg, #26a69a, #00695c);
+    box-shadow: 0 10px 25px rgba(0,105,92, 0.4);
+    border: 4px solid #fff;
 }
 
-/* حالة القارئة */
+/* تصميم مربعات الحالة (للقارئات) */
 .status-box {
-    padding: 30px;
-    border-radius: 15px;
-    margin-top: 20px;
-    transition: background-color 0.5s ease;
+    padding: 40px 20px;
+    border-radius: 20px;
+    margin-top: 30px;
+    transition: all 0.5s ease;
 }
 
-.waiting { background-color: var(--waiting-red); color: #333; }
-.ready { background-color: var(--ready-orange); color: #333; }
+.waiting {
+    background-color: var(--waiting-bg);
+    color: var(--waiting-text);
+    border: 2px solid #ffcdd2;
+}
+
+.ready {
+    background-color: var(--ready-bg);
+    color: var(--ready-text);
+    border: 2px solid #ffe0b2;
+    animation: pulse 2s infinite;
+}
+
 .active { 
-    background-color: var(--active-green); 
-    color: white; 
-    animation: flashBorder 1s infinite; /* الوميض */
+    background-color: var(--active-bg); 
+    color: var(--active-text);
+    box-shadow: 0 0 20px rgba(27,94,32, 0.5);
+    transform: scale(1.02);
 }
 
-@keyframes flashBorder {
-    0% { border: 5px solid yellow; }
-    50% { border: 5px solid transparent; }
-    100% { border: 5px solid yellow; }
+/* صندوق الآيات */
+.verses-box {
+    background: #fdfbf7;
+    padding: 20px;
+    border-radius: 15px;
+    border: 1px dashed #d7ccc8;
+    margin-bottom: 20px;
 }
 
-.hidden { display: none; }
+/* تحسين الجدول للجوال */
+#readersTableContainer {
+    overflow-x: auto; /* يسمح بالسحب يمين ويسار للجدول */
+    margin-top: 15px;
+    border-radius: 10px;
+    border: 1px solid #eee;
+}
 
-/* الجدول */
 table {
     width: 100%;
+    min-width: 400px; /* يجبر الجدول على العرض الكامل حتى لا تنضغط البيانات */
     border-collapse: collapse;
-    margin-top: 15px;
 }
+
+th {
+    background-color: #eceff1;
+    color: #333;
+    font-weight: bold;
+}
+
 th, td {
-    padding: 10px;
-    border-bottom: 1px solid #eee;
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
     font-size: 14px;
+    text-align: center;
+}
+
+/* فئات المساعدة */
+.hidden { display: none !important; }
+
+/* أنيميشن */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 152, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0); }
+}
+
+@media (max-width: 480px) {
+    .container {
+        margin: 0;
+        min-height: 100vh;
+        border-radius: 0; /* إلغاء الحواف الدائرية للشاشة الكاملة */
+    }
+    
+    .big-circle-btn {
+        width: 150px;
+        height: 150px;
+        font-size: 20px;
+    }
 }
