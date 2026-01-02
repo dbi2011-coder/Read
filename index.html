@@ -21,6 +21,17 @@
         .playing { background-color: #c62828 !important; }
         .loader { color: #888; font-size: 14px; margin: 10px 0; }
         .saving-indicator { position: fixed; top: 10px; left: 10px; background: #333; color: #fff; padding: 5px 10px; border-radius: 5px; font-size: 12px; display: none; z-index: 9999;}
+        
+        /* تنسيق الإهداء */
+        .footer-credits {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 13px;
+            color: #777;
+            line-height: 1.6;
+        }
+        .footer-credits strong { color: #00796b; }
     </style>
 </head>
 <body>
@@ -32,6 +43,11 @@
         <input type="text" id="readerName" placeholder="اكتبي اسمك (اختياري)">
         <button class="big-circle-btn" onclick="handleBook()">حجز دور</button>
         <p id="errorMsg" style="color: red;"></p>
+
+        <div class="footer-credits">
+            البرنامج من عمل أختكم / <strong>جواهر محمد العجلان</strong><br>
+            لا تنسونني من صالح دعائكم
+        </div>
     </div>
 
     <div class="container hidden" id="statusScreen">
@@ -62,11 +78,9 @@
     <audio id="audioPlayer"></audio>
 
     <script>
-        // --- إعدادات Supabase ---
         const SUPABASE_URL = 'https://imvcqsgaovkbocvswifx.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdmNxc2dhb3ZrYm9jdnN3aWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjczNzM0MDgsImV4cCI6MjA4Mjk0OTQwOH0.8hb29-fMG7eSkPod3u3X6mE_w5uVsz-Wm2zqmjgnOgg';
         
-        // 🔥 تم تغيير الاسم إلى supabaseClient لحل المشكلة 🔥
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let myId = null;
@@ -79,10 +93,9 @@
         const surahNames = ["", "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه", "الأنبياء", "الحج", "المؤمنون", "النور", "الفرقان", "الشعراء", "النمل", "القصص", "العنكبوت", "الروم", "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر", "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق", "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر", "الممتحنة", "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج", "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس", "التكوير", "الإنفطار", "المطففين", "الإنشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"];
         const surahVersesCount = [0, 7, 286, 200, 176, 120, 165, 206, 75, 129, 109, 123, 111, 43, 52, 99, 128, 111, 110, 98, 135, 112, 78, 118, 64, 77, 227, 93, 88, 69, 60, 34, 30, 73, 54, 45, 83, 182, 88, 75, 85, 54, 53, 89, 59, 37, 35, 38, 29, 18, 45, 60, 49, 62, 55, 78, 96, 29, 22, 24, 13, 14, 11, 11, 18, 12, 12, 30, 52, 52, 44, 28, 28, 20, 56, 40, 31, 50, 40, 46, 42, 29, 19, 36, 25, 22, 17, 19, 26, 30, 20, 15, 21, 11, 8, 8, 19, 5, 8, 8, 11, 11, 8, 3, 9, 5, 4, 7, 3, 6, 3, 5, 4, 5, 6];
 
-        // --- دوال الاتصال بالسيرفر ---
         async function getState() {
             let { data, error } = await supabaseClient.from('session_state').select('data').eq('id', 1).single();
-            if (error) { console.error(error); return null; }
+            if (error) { console.error("Error fetching state:", error); return null; }
             return data.data;
         }
 
@@ -92,11 +105,9 @@
             document.getElementById('saving').style.display = 'none';
         }
 
-        // --- المنطق (الخوارزمية الذكية) ---
         function recalculateQueueVerses(state) {
             if (!state.queue) state.queue = [];
             if (!state.settings) state.settings = { surah: 1, startVerse: 1, amountType: 'verses', amountValue: 5 };
-
             let pointer = { surah: state.settings.surah, verse: state.settings.startVerse };
 
             if (state.currentReaderIndex >= 0 && state.queue[state.currentReaderIndex]) {
@@ -137,17 +148,14 @@
                 state.queue[i].startV = pointer.verse;
                 state.queue[i].endV = actualEnd;
                 state.queue[i].verses = `من ${pointer.verse} إلى ${actualEnd}`;
-
                 pointer.surah = nextPointerSurah;
                 pointer.verse = nextPointerVerse;
             }
             return state;
         }
 
-        // --- دالة الحجز ---
         async function handleBook() {
             let state = await getState();
-            // في حال كانت قاعدة البيانات فارغة تماماً
             if(!state) {
                  state = { settings: { surah: 1, startVerse: 1, amountType: 'verses', amountValue: 5 }, queue: [], currentReaderIndex: -1, isBookingStopped: false };
             }
@@ -174,7 +182,6 @@
             updateUserUI(state);
         }
 
-        // --- جلب القرآن ---
         async function fetchQuranData(surahNum, startV, endV) {
             const displayDiv = document.getElementById('quranTextDisplay');
             const loadingDiv = document.getElementById('quranLoading');
@@ -225,7 +232,6 @@
             }
         }
 
-        // --- الصوت ---
         function toggleAudio() {
             const player = document.getElementById('audioPlayer');
             const btn = document.getElementById('playBtn');
@@ -262,7 +268,6 @@
             }
         };
 
-        // --- تحديث الواجهة ---
         function updateUserUI(state) {
             if (!myId) return; 
             const myReader = state.queue ? state.queue.find(r => r.id === myId) : null;
@@ -329,8 +334,6 @@
         }
 
         window.onload = async function() {
-            // الاستماع للتحديثات الحية من Supabase
-            // نستخدم supabaseClient هنا أيضاً
             const channel = supabaseClient.channel('public:session_state')
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'session_state', filter: 'id=eq.1' }, payload => {
                     updateUserUI(payload.new.data);
