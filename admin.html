@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إدارة المقرأة</title>
+    <title>إدارة المقرأة (محلي)</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <div class="container" id="loginScreen">
         <h2>تسجيل دخول المشرف</h2>
         <input type="password" id="adminPass" placeholder="الرقم السري">
-        <button id="btnLogin">دخول</button>
+        <button onclick="handleLogin()">دخول</button>
     </div>
 
     <div class="container hidden" id="setupScreen">
@@ -24,32 +24,31 @@
         <input type="number" id="startVerse" value="1">
         
         <label>الكمية للقارئة الواحدة:</label>
-        <select id="amountType">
+        <select id="amountType" onchange="toggleAmountInput()">
             <option value="verses">عدد آيات محدد</option>
             <option value="quarter">ربع وجه</option>
             <option value="half">نصف وجه</option>
-            <option value="full">وجه كامل</option> </select>
+            <option value="full">وجه كامل</option>
+        </select>
         
-        <input type="number" id="amountValue" placeholder="عدد الآيات (في حال اخترت آيات محددة)">
+        <input type="number" id="amountValue" placeholder="عدد الآيات">
         
-        <button id="btnStart">بدء الجلسة</button>
+        <button onclick="handleStartSession()">بدء الجلسة</button>
     </div>
 
     <div class="container hidden" id="dashboardScreen">
         <div style="display: flex; justify-content: space-between;">
             <span id="waitingCount">المتبقي: 0</span>
-            <button class="btn-danger" id="stopBookingBtn">تحميل...</button>
+            <button class="btn-danger" id="stopBookingBtn" onclick="toggleBooking()">تحميل...</button>
         </div>
 
-        <button class="big-circle-btn" id="btnNext">القارئة التالية ⏩</button>
+        <button class="big-circle-btn" onclick="nextReader()">القارئة التالية ⏩</button>
         
         <div id="currentReaderDisplay" style="margin: 20px 0; font-weight: bold; color: var(--primary-color);">
             ...
         </div>
 
-        <button class="btn-secondary" onclick="document.getElementById('readersTableContainer').classList.toggle('hidden')">
-            إدارة القارئات 📋
-        </button>
+        <button class="btn-secondary" onclick="toggleTable()">إدارة القارئات 📋</button>
         
         <div id="readersTableContainer" class="hidden">
             <table id="readersTable">
@@ -61,29 +60,33 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initSession, nextReader, toggleBooking, deleteReader, makeUrgent, listenToData, checkAdminPass, getSurahList } from './logic.js';
-
-        // --- تعبئة قائمة السور ---
+    <script src="logic.js"></script>
+    <script>
+        // --- تهيئة الصفحة ---
+        
+        // تعبئة السور
         const surahSelect = document.getElementById('surahNum');
         const surahs = getSurahList();
-        
         for (let i = 1; i < surahs.length; i++) {
             const option = document.createElement('option');
             option.value = i;
             option.text = `${i}. ${surahs[i]}`;
             surahSelect.appendChild(option);
         }
-        surahSelect.value = 2; // البقرة افتراضياً
+        surahSelect.value = 2; 
 
-        // --- إخفاء حقل العدد إذا لم يختر "عدد آيات" ---
-        document.getElementById('amountType').addEventListener('change', (e) => {
-             const input = document.getElementById('amountValue');
-             input.style.display = (e.target.value === 'verses') ? 'block' : 'none';
-        });
+        function toggleAmountInput() {
+            const val = document.getElementById('amountType').value;
+            document.getElementById('amountValue').style.display = (val === 'verses') ? 'block' : 'none';
+        }
 
-        // 1. Login
-        document.getElementById('btnLogin').onclick = () => {
+        function toggleTable() {
+            document.getElementById('readersTableContainer').classList.toggle('hidden');
+        }
+
+        // --- المنطق ---
+
+        function handleLogin() {
             const pass = document.getElementById('adminPass').value;
             if (checkAdminPass(pass)) {
                 document.getElementById('loginScreen').classList.add('hidden');
@@ -91,10 +94,9 @@
             } else {
                 alert('خطأ في الرمز');
             }
-        };
+        }
 
-        // 2. Start Session
-        document.getElementById('btnStart').onclick = () => {
+        function handleStartSession() {
             const surah = document.getElementById('surahNum').value;
             const startV = document.getElementById('startVerse').value;
             const type = document.getElementById('amountType').value;
@@ -104,20 +106,20 @@
             
             document.getElementById('setupScreen').classList.add('hidden');
             document.getElementById('dashboardScreen').classList.remove('hidden');
-        };
+        }
 
-        // 3. Dashboard Buttons
-        document.getElementById('btnNext').onclick = nextReader;
-        document.getElementById('stopBookingBtn').onclick = toggleBooking;
-        window.callDelete = (index) => deleteReader(index);
-        window.callUrgent = (index) => makeUrgent(index);
+        // --- الاستماع للتحديثات ---
+        startListener((state) => {
+            if(!state) return;
 
-        // 4. Live Updates
-        listenToData((state) => {
-            document.getElementById('dashboardScreen').classList.remove('hidden');
-            document.getElementById('loginScreen').classList.add('hidden'); 
-            document.getElementById('setupScreen').classList.add('hidden');
+            document.getElementById('loginScreen').classList.add('hidden');
+            // إذا كانت هناك جلسة نشطة، انتقل للوحة التحكم
+            if (state.queue && (state.queue.length > 0 || state.currentReaderIndex > -1)) {
+                document.getElementById('setupScreen').classList.add('hidden');
+                document.getElementById('dashboardScreen').classList.remove('hidden');
+            }
 
+            // تحديث الواجهة
             const btnStop = document.getElementById('stopBookingBtn');
             btnStop.innerText = state.isBookingStopped ? "فتح الحجز" : "إيقاف الحجز";
             btnStop.style.backgroundColor = state.isBookingStopped ? "#4CAF50" : "#d32f2f";
@@ -132,6 +134,7 @@
                 document.getElementById('currentReaderDisplay').innerText = "في انتظار البدء...";
             }
 
+            // الجدول
             const tbody = document.querySelector('#readersTable tbody');
             tbody.innerHTML = '';
             if(state.queue) {
@@ -142,8 +145,8 @@
                             <td>${index + 1}</td>
                             <td>${reader.verses}</td>
                             <td>
-                                ${index > state.currentReaderIndex ? `<button class="btn-danger" style="padding:5px" onclick="window.callDelete(${index})">حذف</button>` : 'حالياً'}
-                                ${index > state.currentReaderIndex + 1 ? `<button style="padding:5px" onclick="window.callUrgent(${index})">مستعجلة</button>` : ''}
+                                ${index > state.currentReaderIndex ? `<button class="btn-danger" style="padding:5px" onclick="deleteReader(${index})">حذف</button>` : 'حالياً'}
+                                ${index > state.currentReaderIndex + 1 ? `<button style="padding:5px" onclick="makeUrgent(${index})">مستعجلة</button>` : ''}
                             </td>
                         </tr>`;
                         tbody.innerHTML += row;
