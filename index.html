@@ -5,40 +5,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مقرأة التلاوة</title>
     <link rel="stylesheet" href="style.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&display=swap" rel="stylesheet">
+    
     <style>
         .hidden { display: none !important; }
         
-        .verses-box {
-            background: #e8f5e9;
-            padding: 20px;
+        /* تصميم صندوق المصحف */
+        .quran-container {
+            background-color: #fffbf2; /* لون ورق المصحف */
+            padding: 25px;
             border-radius: 15px;
-            border-right: 5px solid #2e7d32;
+            border: 2px solid #d4af37; /* إطار ذهبي */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             margin-bottom: 25px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             text-align: center;
         }
-        
-        .verses-box h3 {
-            color: #1b5e20;
-            margin-top: 0;
-            font-size: 16px;
-            margin-bottom: 10px;
+
+        .quran-header {
+            color: #d4af37;
+            font-family: 'Amiri Quran', serif;
+            font-size: 22px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ebd598;
+            padding-bottom: 10px;
         }
 
-        #assignedVerses {
+        .quran-text {
+            font-family: 'Amiri Quran', serif;
+            font-size: 26px; /* حجم خط كبير وواضح */
+            line-height: 2.4;
+            color: #000;
+            direction: rtl;
+            margin-bottom: 20px;
+            text-align: justify; /* محاذاة النص */
+        }
+
+        .basmala {
+            font-family: 'Amiri Quran', serif;
+            font-size: 22px;
+            color: #555;
+            margin-bottom: 20px;
+            display: block;
+            width: 100%;
+            text-align: center;
+        }
+
+        .ayah-symbol {
+            color: #d4af37;
             font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            margin: 10px 0;
-            display: block;
+            margin: 0 5px;
+            display: inline-block;
         }
 
-        #surahInfo {
-            color: #00796b;
-            font-size: 20px;
-            font-weight: bold;
-            display: block;
+        /* أزرار الصوت */
+        .audio-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 15px;
+            border-top: 1px dashed #d4af37;
+            padding-top: 15px;
         }
+
+        .btn-audio {
+            background-color: #00796b;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.3s;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+        }
+        
+        .btn-audio:hover { background-color: #004d40; }
+        .playing { background-color: #c62828 !important; }
+        
+        .loader { color: #888; font-size: 14px; margin: 10px 0; }
     </style>
 </head>
 <body>
@@ -53,12 +102,21 @@
     </div>
 
     <div class="container hidden" id="statusScreen">
-        <h2 id="welcomeName" style="color: #00796b;">...</h2>
+        <h2 id="welcomeName" style="color: #00796b; margin-bottom: 20px;">...</h2>
         
-        <div class="verses-box">
-            <h3>📖 الآيات المخصصة لك:</h3>
-            <div id="surahInfo">...</div>
-            <div id="assignedVerses">...</div>
+        <div class="quran-container">
+            <div id="surahTitle" class="quran-header">...</div>
+            
+            <div id="quranLoading" class="loader hidden">جاري جلب الآيات...</div>
+            
+            <div id="quranTextDisplay" class="quran-text"></div>
+            
+            <div class="audio-controls hidden" id="audioControls">
+                <button class="btn-audio" id="playBtn" onclick="toggleAudio()">
+                    <span>🔊</span> استماع (الشيخ الحصري)
+                </button>
+                <div id="audioStatus" style="font-size: 14px; color: #555;"></div>
+            </div>
         </div>
 
         <div id="roleBox" class="status-box waiting">
@@ -66,12 +124,18 @@
             <p id="subStatus">...</p>
         </div>
         
-        <button onclick="location.reload()" style="background:none; color:#999; border:none; margin-top:20px; font-size:12px; box-shadow:none;">خروج</button>
+        <button onclick="location.reload()" style="background:none; color:#999; border:none; margin-top:20px; font-size:12px; box-shadow:none;">تسجيل خروج</button>
     </div>
+
+    <audio id="audioPlayer"></audio>
 
     <script>
         const STORAGE_KEY = 'quran_queue_offline_v3';
         let myId = null;
+        let audioPlaylist = []; // قائمة روابط الآيات
+        let currentAudioIndex = 0;
+        let isPlaying = false;
+        let lastVersesHash = ""; // لمنع إعادة التحميل المتكرر
 
         const surahNames = [
             "", "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", 
@@ -88,6 +152,7 @@
             "المسد", "الإخلاص", "الفلق", "الناس"
         ];
 
+        // --- الأساسيات ---
         function getState() {
             const data = localStorage.getItem(STORAGE_KEY);
             return data ? JSON.parse(data) : { settings: {surah: 1}, queue: [], currentReaderIndex: -1, isBookingStopped: false };
@@ -110,12 +175,10 @@
         function recalculateQueueVerses(state) {
             if (!state.queue) state.queue = [];
             if(!state.settings) state.settings = { surah: 1, startVerse: 1, amountType: 'verses', amountValue: 5 };
-
             let nextStartVerse = state.settings.startVerse;
             if (state.currentReaderIndex >= 0 && state.queue[state.currentReaderIndex]) {
                 nextStartVerse = state.queue[state.currentReaderIndex].endV + 1;
             } 
-            
             for (let i = state.currentReaderIndex + 1; i < state.queue.length; i++) {
                 const info = calculateVersesBlock(nextStartVerse, state.settings.amountType, state.settings.amountValue);
                 state.queue[i].startV = info.start;
@@ -128,30 +191,17 @@
 
         function handleBook() {
             let state = getState();
-            const errorMsg = document.getElementById('errorMsg');
-
             if (state.isBookingStopped) {
-                errorMsg.innerText = "نعتذر منك، الحجز متوقف حالياً لاكتمال العدد.";
+                document.getElementById('errorMsg').innerText = "نعتذر منك، الحجز متوقف حالياً.";
                 return;
             }
 
             const nameInput = document.getElementById('readerName');
             let name = nameInput.value.trim();
-            if (!name) {
-                const nextNum = (state.queue ? state.queue.length : 0) + 1;
-                name = `قارئة ${nextNum}`;
-            }
+            if (!name) name = `قارئة ${(state.queue ? state.queue.length : 0) + 1}`;
 
             if (!state.queue) state.queue = [];
-            
-            const newReader = {
-                id: Date.now(), 
-                name: name,
-                verses: "...", 
-                surah: "", 
-                startV: 0,
-                endV: 0
-            };
+            const newReader = { id: Date.now(), name: name, verses: "...", surah: "", startV: 0, endV: 0 };
 
             state.queue.push(newReader);
             state = recalculateQueueVerses(state);
@@ -166,12 +216,110 @@
             updateUserUI(state);
         }
 
+        // --- 🔥 جلب النص القرآني والصوت 🔥 ---
+        async function fetchQuranData(surahNum, startV, endV) {
+            const displayDiv = document.getElementById('quranTextDisplay');
+            const loadingDiv = document.getElementById('quranLoading');
+            const audioDiv = document.getElementById('audioControls');
+            
+            loadingDiv.classList.remove('hidden');
+            displayDiv.innerHTML = '';
+            audioDiv.classList.add('hidden');
+
+            try {
+                // استخدام API لجلب النص (الإصدار البسيط للنص لتجنب مشاكل الرسم المعقدة)
+                const limit = endV - startV + 1;
+                const offset = startV - 1; 
+                // نستخدم edition: quran-uthmani للحصول على رسم عثماني نصي
+                const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahNum}/quran-uthmani?offset=${offset}&limit=${limit}`);
+                const data = await response.json();
+
+                if(data.code === 200) {
+                    const ayahs = data.data.ayahs;
+                    let fullText = "";
+                    audioPlaylist = [];
+                    currentAudioIndex = 0;
+
+                    // إضافة البسملة يدوياً إذا كانت بداية السورة (وليست الفاتحة أو التوبة)
+                    if(startV === 1 && surahNum !== 1 && surahNum !== 9) {
+                        displayDiv.innerHTML += '<div class="basmala">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>';
+                    }
+
+                    ayahs.forEach(ayah => {
+                        // تنظيف النص: بعض الـ APIs تدمج البسملة في الآية الأولى، نزيلها لنتجنب التكرار
+                        let text = ayah.text;
+                        if(surahNum !== 1 && startV === 1 && ayah.numberInSurah === 1) {
+                             text = text.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").trim();
+                        }
+
+                        fullText += `<span>${text} <span class="ayah-symbol">۝</span> </span>`;
+
+                        // تحضير روابط الصوت (everyayah.com) - 3 خانات
+                        const sID = String(surahNum).padStart(3, '0');
+                        const vID = String(ayah.numberInSurah).padStart(3, '0');
+                        audioPlaylist.push(`https://everyayah.com/data/Husary_128kbps/${sID}${vID}.mp3`);
+                    });
+
+                    displayDiv.innerHTML += fullText;
+                    loadingDiv.classList.add('hidden');
+                    audioDiv.classList.remove('hidden'); // إظهار زر الصوت بعد اكتمال التحميل
+                } else {
+                    displayDiv.innerHTML = "حدث خطأ أثناء تحميل الآيات.";
+                }
+
+            } catch (error) {
+                loadingDiv.classList.add('hidden');
+                displayDiv.innerHTML = "تعذر تحميل الآيات. يرجى التأكد من اتصال الإنترنت.";
+                console.error(error);
+            }
+        }
+
+        // --- مشغل الصوت ---
+        function toggleAudio() {
+            const player = document.getElementById('audioPlayer');
+            const btn = document.getElementById('playBtn');
+            const status = document.getElementById('audioStatus');
+
+            if (isPlaying) {
+                player.pause();
+                isPlaying = false;
+                btn.innerHTML = '<span>🔊</span> استمرار';
+                btn.classList.remove('playing');
+            } else {
+                if(audioPlaylist.length > 0) {
+                    if(!player.src || player.ended) player.src = audioPlaylist[currentAudioIndex];
+                    player.play();
+                    isPlaying = true;
+                    btn.innerHTML = '<span>⏸</span> إيقاف مؤقت';
+                    btn.classList.add('playing');
+                    status.innerText = `تلاوة آية ${currentAudioIndex + 1}`;
+                }
+            }
+        }
+
+        document.getElementById('audioPlayer').onended = function() {
+            currentAudioIndex++;
+            if (currentAudioIndex < audioPlaylist.length) {
+                this.src = audioPlaylist[currentAudioIndex];
+                this.play();
+                document.getElementById('audioStatus').innerText = `تلاوة آية ${currentAudioIndex + 1}`;
+            } else {
+                isPlaying = false;
+                const btn = document.getElementById('playBtn');
+                btn.innerHTML = '<span>🔊</span> إعادة الاستماع';
+                btn.classList.remove('playing');
+                document.getElementById('audioStatus').innerText = "انتهت التلاوة";
+                currentAudioIndex = 0;
+            }
+        };
+
+        // --- تحديث الواجهة ---
         function updateUserUI(state) {
             if (!myId) return; 
 
             const myReader = state.queue ? state.queue.find(r => r.id === myId) : null;
             const myIndex = state.queue ? state.queue.findIndex(r => r.id === myId) : -1;
-            const currentIndex = state.currentReaderIndex; // يبدأ من -1
+            const currentIndex = state.currentReaderIndex;
 
             if (!myReader) {
                 if (!document.getElementById('statusScreen').classList.contains('hidden')) {
@@ -181,63 +329,50 @@
                 return;
             }
 
-            let surahNameText = "سورة مختارة";
-            if (state.settings && state.settings.surah) {
-                surahNameText = `سورة ${surahNames[state.settings.surah]}`;
-            }
-            document.getElementById('surahInfo').innerText = surahNameText;
-            document.getElementById('assignedVerses').innerText = myReader.verses;
+            // --- تحديث عناوين وبيانات المصحف ---
+            // 1. العنوان
+            const sName = surahNames[state.settings.surah] || "مختارة";
+            document.getElementById('surahTitle').innerText = `سورة ${sName} - ${myReader.verses}`;
 
+            // 2. جلب البيانات (فقط إذا تغيرت الآيات أو لم يتم تحميلها)
+            const currentHash = `${state.settings.surah}-${myReader.startV}-${myReader.endV}`;
+            if (currentHash !== lastVersesHash) {
+                lastVersesHash = currentHash;
+                fetchQuranData(state.settings.surah, myReader.startV, myReader.endV);
+            }
+
+            // --- منطق الطابور (الجديد والمصحح) ---
             if (myIndex < currentIndex && myIndex !== -1) {
                 alert("انتهى دورك، تقبل الله منك!");
                 location.reload();
                 return;
             }
 
-            // --- 🔥 منطق الرسائل الجديد 🔥 ---
             const roleBox = document.getElementById('roleBox');
             const statusText = document.getElementById('statusText');
             const subStatus = document.getElementById('subStatus');
-            
-            // حساب الفرق بين دوري ودور المشرفة
             const diff = myIndex - currentIndex;
 
             roleBox.classList.remove('waiting', 'ready', 'active');
 
             if (diff === 0) {
-                // دوري الآن (المشرفة تقف عندي)
                 roleBox.classList.add('active');
                 statusText.innerText = "دورك الآن 🎤";
                 subStatus.innerText = "تفضلي بالقراءة";
                 if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
-            
             } else if (diff === 1) {
-                // أنا التالية
                 roleBox.classList.add('ready');
-                
-                // حالة خاصة: إذا كانت المشرفة لم تبدأ بعد (currentIndex = -1) وأنا رقم 0
-                // أو إذا كانت المشرفة تقف عند شخص وأنا بعده
-                
                 if (currentIndex === -1) {
-                    // أنا الأولى في الطابور والمشرفة لم تضغط بدء
                     statusText.innerText = "أنتِ القارئة الأولى";
                     subStatus.innerText = "بانتظار بدء المشرفة للجلسة...";
                 } else {
-                    // هناك شخص يقرأ وأنا بعده
                     statusText.innerText = "استعدي..";
                     subStatus.innerText = "أنتِ القارئة التالية";
                 }
-                
             } else {
-                // انتظار (يوجد ناس قبلي)
                 roleBox.classList.add('waiting');
                 statusText.innerText = "انتظار";
-                
-                // التعديل: حساب عدد المنتظرين أمامي فقط (بدون احتساب من يقرأ الآن)
-                // المعادلة: (ترتيبي) - (ترتيب اللي يقرأ) - 1
-                const waitingAhead = diff - 1;
-                
-                subStatus.innerText = `يسبقك في الانتظار: ${waitingAhead} قارئات`;
+                subStatus.innerText = `يسبقك في الانتظار: ${diff - 1} قارئات`;
             }
         }
 
