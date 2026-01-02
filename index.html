@@ -21,21 +21,33 @@
         .playing { background-color: #c62828 !important; }
         .loader { color: #888; font-size: 14px; margin: 10px 0; }
         .saving-indicator { position: fixed; top: 10px; left: 10px; background: #333; color: #fff; padding: 5px 10px; border-radius: 5px; font-size: 12px; display: none; z-index: 9999;}
-        
-        /* تنسيق الإهداء */
-        .footer-credits {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            font-size: 13px;
-            color: #777;
-            line-height: 1.6;
-        }
+        .footer-credits { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 13px; color: #777; line-height: 1.6; }
         .footer-credits strong { color: #00796b; }
+
+        /* 🔥 إشعارات (Toasts) 🔥 */
+        #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10000; display: flex; flex-direction: column; gap: 10px; width: 90%; max-width: 300px; }
+        .toast { background: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 14px; animation: slideDown 0.3s ease-out; border-right: 5px solid #d32f2f; color: #c62828; }
+        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* 🔥 نافذة تنبيه (Modal) 🔥 */
+        .custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; display: none; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+        .custom-modal { background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .custom-modal h3 { margin-top: 0; color: #00796b; margin-bottom: 10px;}
+        .modal-btn { padding: 10px 30px; border: none; border-radius: 20px; cursor: pointer; font-size: 14px; margin-top: 20px; background-color: #00796b; color: white; }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
     <div id="saving" class="saving-indicator">جاري الاتصال...</div>
+    <div id="toast-container"></div>
+
+    <div id="alertModal" class="custom-modal-overlay">
+        <div class="custom-modal">
+            <h3 id="modalTitle">تنبيه</h3>
+            <p id="modalMessage">...</p>
+            <button onclick="location.reload()" class="modal-btn">حسناً</button>
+        </div>
+    </div>
 
     <div class="container" id="bookingScreen">
         <h1>حجز دور للتلاوة 📖</h1>
@@ -43,7 +55,6 @@
         <input type="text" id="readerName" placeholder="اكتبي اسمك (اختياري)">
         <button class="big-circle-btn" onclick="handleBook()">حجز دور</button>
         <p id="errorMsg" style="color: red;"></p>
-
         <div class="footer-credits">
             البرنامج من عمل أختكم / <strong>جواهر محمد العجلان</strong><br>
             لا تنسونني من صالح دعائكم
@@ -52,35 +63,26 @@
 
     <div class="container hidden" id="statusScreen">
         <h2 id="welcomeName" style="color: #00796b; margin-bottom: 10px;">...</h2>
-        
         <div id="roleBox" class="status-box waiting">
             <h1 id="statusText" style="margin: 10px 0;">...</h1>
             <p id="subStatus" style="font-size: 16px;">...</p>
         </div>
-
         <div class="quran-container">
             <div id="surahTitle" class="quran-header">...</div>
-            
             <div class="audio-controls hidden" id="audioControls">
-                <button class="btn-audio" id="playBtn" onclick="toggleAudio()">
-                    <span>🔊</span> استماع (الشيخ الحصري)
-                </button>
+                <button class="btn-audio" id="playBtn" onclick="toggleAudio()"><span>🔊</span> استماع (الشيخ الحصري)</button>
                 <div id="audioStatus" style="font-size: 14px; color: #555;"></div>
             </div>
-
             <div id="quranLoading" class="loader hidden">جاري جلب الآيات...</div>
             <div id="quranTextDisplay" class="quran-text"></div>
         </div>
-        
         <button onclick="location.reload()" style="background:none; color:#999; border:none; margin-top:10px; font-size:12px; box-shadow:none;">تسجيل خروج</button>
     </div>
-
     <audio id="audioPlayer"></audio>
 
     <script>
         const SUPABASE_URL = 'https://imvcqsgaovkbocvswifx.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltdmNxc2dhb3ZrYm9jdnN3aWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjczNzM0MDgsImV4cCI6MjA4Mjk0OTQwOH0.8hb29-fMG7eSkPod3u3X6mE_w5uVsz-Wm2zqmjgnOgg';
-        
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let myId = null;
@@ -93,9 +95,24 @@
         const surahNames = ["", "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه", "الأنبياء", "الحج", "المؤمنون", "النور", "الفرقان", "الشعراء", "النمل", "القصص", "العنكبوت", "الروم", "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر", "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق", "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر", "الممتحنة", "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج", "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس", "التكوير", "الإنفطار", "المطففين", "الإنشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"];
         const surahVersesCount = [0, 7, 286, 200, 176, 120, 165, 206, 75, 129, 109, 123, 111, 43, 52, 99, 128, 111, 110, 98, 135, 112, 78, 118, 64, 77, 227, 93, 88, 69, 60, 34, 30, 73, 54, 45, 83, 182, 88, 75, 85, 54, 53, 89, 59, 37, 35, 38, 29, 18, 45, 60, 49, 62, 55, 78, 96, 29, 22, 24, 13, 14, 11, 11, 18, 12, 12, 30, 52, 52, 44, 28, 28, 20, 56, 40, 31, 50, 40, 46, 42, 29, 19, 36, 25, 22, 17, 19, 26, 30, 20, 15, 21, 11, 8, 8, 19, 5, 8, 8, 11, 11, 8, 3, 9, 5, 4, 7, 3, 6, 3, 5, 4, 5, 6];
 
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 3000);
+        }
+
+        function showModal(title, message) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalMessage').innerText = message;
+            document.getElementById('alertModal').style.display = 'flex';
+        }
+
         async function getState() {
             let { data, error } = await supabaseClient.from('session_state').select('data').eq('id', 1).single();
-            if (error) { console.error("Error fetching state:", error); return null; }
+            if (error) { console.error("Error:", error); return null; }
             return data.data;
         }
 
@@ -113,13 +130,8 @@
             if (state.currentReaderIndex >= 0 && state.queue[state.currentReaderIndex]) {
                 const currReader = state.queue[state.currentReaderIndex];
                 const maxVerses = surahVersesCount[currReader.surahNum];
-                if (currReader.endV >= maxVerses) {
-                    pointer.surah = currReader.surahNum + 1;
-                    pointer.verse = 1;
-                } else {
-                    pointer.surah = currReader.surahNum;
-                    pointer.verse = currReader.endV + 1;
-                }
+                if (currReader.endV >= maxVerses) { pointer.surah = currReader.surahNum + 1; pointer.verse = 1; } 
+                else { pointer.surah = currReader.surahNum; pointer.verse = currReader.endV + 1; }
             }
 
             for (let i = state.currentReaderIndex + 1; i < state.queue.length; i++) {
@@ -143,7 +155,6 @@
                     nextPointerSurah = pointer.surah;
                     nextPointerVerse = actualEnd + 1;
                 }
-
                 state.queue[i].surahNum = pointer.surah;
                 state.queue[i].startV = pointer.verse;
                 state.queue[i].endV = actualEnd;
@@ -156,12 +167,10 @@
 
         async function handleBook() {
             let state = await getState();
-            if(!state) {
-                 state = { settings: { surah: 1, startVerse: 1, amountType: 'verses', amountValue: 5 }, queue: [], currentReaderIndex: -1, isBookingStopped: false };
-            }
+            if(!state) { state = { settings: { surah: 1, startVerse: 1, amountType: 'verses', amountValue: 5 }, queue: [], currentReaderIndex: -1, isBookingStopped: false }; }
 
             if (state.isBookingStopped) {
-                document.getElementById('errorMsg').innerText = "نعتذر منك، الحجز متوقف حالياً.";
+                showToast("نعتذر منك، الحجز متوقف حالياً.");
                 return;
             }
             const nameInput = document.getElementById('readerName');
@@ -210,9 +219,7 @@
 
                     ayahs.forEach(ayah => {
                         let text = ayah.text;
-                        if(surahNum !== 1 && startV === 1 && ayah.numberInSurah === 1) {
-                             text = text.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").trim();
-                        }
+                        if(surahNum !== 1 && startV === 1 && ayah.numberInSurah === 1) { text = text.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").trim(); }
                         fullText += `<span>${text} <span class="ayah-symbol">۝</span> </span>`;
                         const sID = String(surahNum).padStart(3, '0');
                         const vID = String(ayah.numberInSurah).padStart(3, '0');
@@ -228,7 +235,6 @@
             } catch (error) {
                 loadingDiv.classList.add('hidden');
                 displayDiv.innerHTML = `<div style="color:#d32f2f; font-size:16px; padding:10px;">⚠️ تعذر عرض الآيات تلقائياً.<br><small>يرجى القراءة من المصحف (من آية ${startV} إلى ${endV})</small></div>`;
-                console.error("Fetch Error:", error);
             }
         }
 
@@ -276,8 +282,7 @@
 
             if (!myReader) {
                 if (!document.getElementById('statusScreen').classList.contains('hidden')) {
-                    alert("تم إزالة الحجز.");
-                    location.reload();
+                    showModal("تنبيه", "تم إزالة الحجز.");
                 }
                 return;
             }
@@ -292,8 +297,7 @@
             }
 
             if (myIndex < currentIndex && myIndex !== -1) {
-                alert("انتهى دورك، تقبل الله منك!");
-                location.reload();
+                showModal("تقبل الله", "انتهى دورك، تقبل الله منك!");
                 return;
             }
 
