@@ -11,7 +11,7 @@
     <div class="container" id="bookingScreen">
         <h1>حجز دور للتلاوة 📖</h1>
         <input type="text" id="readerName" placeholder="اكتبي اسمك (اختياري)">
-        <button class="big-circle-btn" id="btnBook">حجز دور</button>
+        <button class="big-circle-btn" onclick="handleBook()">حجز دور</button>
         <p id="errorMsg" style="color: red;"></p>
     </div>
 
@@ -30,27 +30,26 @@
         </div>
     </div>
 
-    <script type="module">
-        import { bookRole, listenToData } from './logic.js';
-
+    <script src="logic.js"></script>
+    <script>
         let myId = null;
 
-        document.getElementById('btnBook').onclick = () => {
+        function handleBook() {
             const name = document.getElementById('readerName').value;
+            const result = bookRole(name);
             
-            bookRole(name).then((result) => {
-                if (result.success) {
-                    myId = result.readerId;
-                    document.getElementById('bookingScreen').classList.add('hidden');
-                    document.getElementById('statusScreen').classList.remove('hidden');
-                    document.getElementById('welcomeName').innerText = `أهلاً بك: ${result.details.name}`;
-                } else {
-                    document.getElementById('errorMsg').innerText = result.msg;
-                }
-            });
-        };
+            if (result.success) {
+                myId = result.readerId;
+                document.getElementById('bookingScreen').classList.add('hidden');
+                document.getElementById('statusScreen').classList.remove('hidden');
+                document.getElementById('welcomeName').innerText = `أهلاً بك: ${result.details.name}`;
+            } else {
+                document.getElementById('errorMsg').innerText = result.msg;
+            }
+        }
 
-        listenToData((state) => {
+        // الاستماع للتحديثات
+        startListener((state) => {
             if (!myId) return; 
 
             const myReader = state.queue ? state.queue.find(r => r.id === myId) : null;
