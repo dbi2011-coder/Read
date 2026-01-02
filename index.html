@@ -9,90 +9,16 @@
     
     <style>
         .hidden { display: none !important; }
-        
-        .quran-container {
-            background-color: #fffbf2;
-            padding: 25px;
-            border-radius: 15px;
-            border: 2px solid #d4af37;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            margin-bottom: 25px;
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .quran-header {
-            color: #d4af37;
-            font-family: 'Amiri Quran', serif;
-            font-size: 22px;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #ebd598;
-            padding-bottom: 10px;
-        }
-
-        .quran-text {
-            font-family: 'Amiri Quran', serif;
-            font-size: 26px;
-            line-height: 2.4;
-            color: #000;
-            direction: rtl;
-            margin-bottom: 20px;
-            text-align: justify;
-            margin-top: 15px;
-        }
-
-        .basmala {
-            font-family: 'Amiri Quran', serif;
-            font-size: 22px;
-            color: #555;
-            margin-bottom: 20px;
-            display: block;
-            width: 100%;
-            text-align: center;
-        }
-
-        .ayah-symbol {
-            color: #d4af37;
-            font-size: 24px;
-            margin: 0 5px;
-            display: inline-block;
-        }
-
-        .status-box {
-            padding: 20px;
-            border-radius: 15px;
-            margin-top: 10px;
-            transition: all 0.5s ease;
-        }
-        
-        .audio-controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin: 10px 0;
-            padding-bottom: 15px;
-            border-bottom: 1px dashed #d4af37;
-        }
-
-        .btn-audio {
-            background-color: #00796b;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 25px;
-            font-size: 16px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: 0.3s;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
-        }
-        
+        .quran-container { background-color: #fffbf2; padding: 25px; border-radius: 15px; border: 2px solid #d4af37; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 25px; text-align: center; margin-top: 20px; }
+        .quran-header { color: #d4af37; font-family: 'Amiri Quran', serif; font-size: 22px; margin-bottom: 10px; border-bottom: 1px solid #ebd598; padding-bottom: 10px; }
+        .quran-text { font-family: 'Amiri Quran', serif; font-size: 26px; line-height: 2.4; color: #000; direction: rtl; margin-bottom: 20px; text-align: justify; margin-top: 15px; }
+        .basmala { font-family: 'Amiri Quran', serif; font-size: 22px; color: #555; margin-bottom: 20px; display: block; width: 100%; text-align: center; }
+        .ayah-symbol { color: #d4af37; font-size: 24px; margin: 0 5px; display: inline-block; }
+        .status-box { padding: 20px; border-radius: 15px; margin-top: 10px; transition: all 0.5s ease; }
+        .audio-controls { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 10px 0; padding-bottom: 15px; border-bottom: 1px dashed #d4af37; }
+        .btn-audio { background-color: #00796b; color: #fff; border: none; padding: 10px 20px; border-radius: 25px; font-size: 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; box-shadow: 0 3px 6px rgba(0,0,0,0.2); }
         .btn-audio:hover { background-color: #004d40; }
         .playing { background-color: #c62828 !important; }
-        
         .loader { color: #888; font-size: 14px; margin: 10px 0; }
     </style>
 </head>
@@ -101,7 +27,6 @@
     <div class="container" id="bookingScreen">
         <h1>حجز دور للتلاوة 📖</h1>
         <p style="color: #666; margin-bottom: 20px;">أهلاً بكِ، يمكنك حجز دورك الآن</p>
-        
         <input type="text" id="readerName" placeholder="اكتبي اسمك (اختياري)">
         <button class="big-circle-btn" onclick="handleBook()">حجز دور</button>
         <p id="errorMsg" style="color: red;"></p>
@@ -109,30 +34,21 @@
 
     <div class="container hidden" id="statusScreen">
         <h2 id="welcomeName" style="color: #00796b; margin-bottom: 10px;">...</h2>
-        
         <div id="roleBox" class="status-box waiting">
             <h1 id="statusText" style="margin: 10px 0;">...</h1>
             <p id="subStatus" style="font-size: 16px;">...</p>
         </div>
-
         <div class="quran-container">
             <div id="surahTitle" class="quran-header">...</div>
-            
             <div class="audio-controls hidden" id="audioControls">
-                <button class="btn-audio" id="playBtn" onclick="toggleAudio()">
-                    <span>🔊</span> استماع (الشيخ الحصري)
-                </button>
+                <button class="btn-audio" id="playBtn" onclick="toggleAudio()"><span>🔊</span> استماع (الشيخ الحصري)</button>
                 <div id="audioStatus" style="font-size: 14px; color: #555;"></div>
             </div>
-
             <div id="quranLoading" class="loader hidden">جاري جلب الآيات...</div>
-            
             <div id="quranTextDisplay" class="quran-text"></div>
         </div>
-        
         <button onclick="location.reload()" style="background:none; color:#999; border:none; margin-top:10px; font-size:12px; box-shadow:none;">تسجيل خروج</button>
     </div>
-
     <audio id="audioPlayer"></audio>
 
     <script>
@@ -144,20 +60,8 @@
         let lastVersesHash = ""; 
         let lastStatus = ""; 
 
-        const surahNames = [
-            "", "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", 
-            "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه", 
-            "الأنبياء", "الحج", "المؤمنون", "النور", "الفرقان", "الشعراء", "النمل", "القصص", "العنكبوت", "الروم", 
-            "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر", 
-            "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق", 
-            "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر", "الممتحنة", 
-            "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج", 
-            "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس", 
-            "التكوير", "الإنفطار", "المطففين", "الإنشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", 
-            "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", 
-            "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", 
-            "المسد", "الإخلاص", "الفلق", "الناس"
-        ];
+        const surahNames = ["", "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه", "الأنبياء", "الحج", "المؤمنون", "النور", "الفرقان", "الشعراء", "النمل", "القصص", "العنكبوت", "الروم", "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر", "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق", "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر", "الممتحنة", "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج", "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس", "التكوير", "الإنفطار", "المطففين", "الإنشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"];
+        const surahVersesCount = [0, 7, 286, 200, 176, 120, 165, 206, 75, 129, 109, 123, 111, 43, 52, 99, 128, 111, 110, 98, 135, 112, 78, 118, 64, 77, 227, 93, 88, 69, 60, 34, 30, 73, 54, 45, 83, 182, 88, 75, 85, 54, 53, 89, 59, 37, 35, 38, 29, 18, 45, 60, 49, 62, 55, 78, 96, 29, 22, 24, 13, 14, 11, 11, 18, 12, 12, 30, 52, 52, 44, 28, 28, 20, 56, 40, 31, 50, 40, 46, 42, 29, 19, 36, 25, 22, 17, 19, 26, 30, 20, 15, 21, 11, 8, 8, 19, 5, 8, 8, 11, 11, 8, 3, 9, 5, 4, 7, 3, 6, 3, 5, 4, 5, 6];
 
         function getState() {
             const data = localStorage.getItem(STORAGE_KEY);
@@ -168,29 +72,56 @@
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         }
 
-        function calculateVersesBlock(startFrom, amountType, amountValue) {
-            let start = parseInt(startFrom); 
-            let end = start;
-            if (amountType === 'verses') end = start + parseInt(amountValue) - 1;
-            else if (amountType === 'quarter') end = start + 7; 
-            else if (amountType === 'half') end = start + 14; 
-            else if (amountType === 'full') end = start + 28; 
-            return { start, end, text: `من آية ${start} إلى ${end}` };
-        }
-
+        // نفس دالة الحساب الموجودة عند المشرفة لضمان التوافق
         function recalculateQueueVerses(state) {
             if (!state.queue) state.queue = [];
-            if(!state.settings) state.settings = { surah: 1, startVerse: 1, amountType: 'verses', amountValue: 5 };
-            let nextStartVerse = state.settings.startVerse;
+            if (!state.settings) state.settings = { surah: 1, startVerse: 1, amountType: 'verses', amountValue: 5 };
+
+            let pointer = {
+                surah: state.settings.surah,
+                verse: state.settings.startVerse
+            };
+
             if (state.currentReaderIndex >= 0 && state.queue[state.currentReaderIndex]) {
-                nextStartVerse = state.queue[state.currentReaderIndex].endV + 1;
-            } 
+                const currReader = state.queue[state.currentReaderIndex];
+                const maxVerses = surahVersesCount[currReader.surahNum];
+                if (currReader.endV >= maxVerses) {
+                    pointer.surah = currReader.surahNum + 1;
+                    pointer.verse = 1;
+                } else {
+                    pointer.surah = currReader.surahNum;
+                    pointer.verse = currReader.endV + 1;
+                }
+            }
+
             for (let i = state.currentReaderIndex + 1; i < state.queue.length; i++) {
-                const info = calculateVersesBlock(nextStartVerse, state.settings.amountType, state.settings.amountValue);
-                state.queue[i].startV = info.start;
-                state.queue[i].endV = info.end;
-                state.queue[i].verses = info.text;
-                nextStartVerse = info.end + 1;
+                if (pointer.surah > 114) pointer.surah = 1;
+                const maxVerses = surahVersesCount[pointer.surah];
+                let amount = 0;
+                if (state.settings.amountType === 'verses') amount = parseInt(state.settings.amountValue);
+                else if (state.settings.amountType === 'quarter') amount = 8;
+                else if (state.settings.amountType === 'half') amount = 15;
+                else if (state.settings.amountType === 'full') amount = 29;
+
+                let proposedEnd = pointer.verse + amount - 1;
+                let actualEnd = proposedEnd;
+
+                if (proposedEnd >= maxVerses) {
+                    actualEnd = maxVerses;
+                    var nextPointerSurah = pointer.surah + 1;
+                    var nextPointerVerse = 1;
+                } else {
+                    var nextPointerSurah = pointer.surah;
+                    var nextPointerVerse = actualEnd + 1;
+                }
+
+                state.queue[i].surahNum = pointer.surah;
+                state.queue[i].startV = pointer.verse;
+                state.queue[i].endV = actualEnd;
+                state.queue[i].verses = `من ${pointer.verse} إلى ${actualEnd}`;
+
+                pointer.surah = nextPointerSurah;
+                pointer.verse = nextPointerVerse;
             }
             return state;
         }
@@ -201,52 +132,40 @@
                 document.getElementById('errorMsg').innerText = "نعتذر منك، الحجز متوقف حالياً.";
                 return;
             }
-
             const nameInput = document.getElementById('readerName');
             let name = nameInput.value.trim();
             if (!name) name = `قارئة ${(state.queue ? state.queue.length : 0) + 1}`;
-
             if (!state.queue) state.queue = [];
-            const newReader = { id: Date.now(), name: name, verses: "...", surah: "", startV: 0, endV: 0 };
-
+            
+            // تهيئة مبدئية
+            const newReader = { id: Date.now(), name: name, verses: "...", surahNum: 1, startV: 0, endV: 0 };
             state.queue.push(newReader);
-            state = recalculateQueueVerses(state);
+            state = recalculateQueueVerses(state); // سيقوم بتعيين السورة والآيات الصحيحة
             saveState(state);
 
             myId = newReader.id;
-            
             document.getElementById('bookingScreen').classList.add('hidden');
             document.getElementById('statusScreen').classList.remove('hidden');
             document.getElementById('welcomeName').innerText = `أهلاً بك: ${name}`;
-            
             updateUserUI(state);
         }
 
-        // --- دالة جلب البيانات المصححة ---
         async function fetchQuranData(surahNum, startV, endV) {
             const displayDiv = document.getElementById('quranTextDisplay');
             const loadingDiv = document.getElementById('quranLoading');
             const audioDiv = document.getElementById('audioControls');
-            
             loadingDiv.classList.remove('hidden');
             displayDiv.innerHTML = '';
             audioDiv.classList.add('hidden');
 
             try {
-                // حماية من الأرقام الخاطئة
-                if (!surahNum || startV <= 0 || endV < startV) {
-                     throw new Error("نطاق الآيات غير صحيح");
-                }
-
+                if (!surahNum || startV <= 0 || endV < startV) throw new Error("نطاق الآيات غير صحيح");
                 const limit = endV - startV + 1;
                 const offset = startV - 1; 
                 const response = await fetch(`https://api.alquran.cloud/v1/surah/${surahNum}/quran-uthmani?offset=${offset}&limit=${limit}`);
-                
                 if(!response.ok) throw new Error("فشل الاتصال بالمصدر");
-
                 const data = await response.json();
 
-                // 🔥 هنا التعديل لإصلاح الخطأ forEach is not a function 🔥
                 if(data.code === 200 && data.data && Array.isArray(data.data.ayahs)) {
                     const ayahs = data.data.ayahs;
                     let fullText = "";
@@ -262,9 +181,7 @@
                         if(surahNum !== 1 && startV === 1 && ayah.numberInSurah === 1) {
                              text = text.replace("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", "").trim();
                         }
-
                         fullText += `<span>${text} <span class="ayah-symbol">۝</span> </span>`;
-
                         const sID = String(surahNum).padStart(3, '0');
                         const vID = String(ayah.numberInSurah).padStart(3, '0');
                         audioPlaylist.push(`https://everyayah.com/data/Husary_128kbps/${sID}${vID}.mp3`);
@@ -274,15 +191,11 @@
                     loadingDiv.classList.add('hidden');
                     audioDiv.classList.remove('hidden');
                 } else {
-                    // في حال كانت البيانات سليمة لكن لا تحتوي على مصفوفة
-                    throw new Error("تنسيق البيانات المستلمة غير متوافق");
+                    throw new Error("تنسيق البيانات غير متوافق");
                 }
             } catch (error) {
                 loadingDiv.classList.add('hidden');
-                displayDiv.innerHTML = `<div style="color:#d32f2f; font-size:16px; padding:10px;">
-                    ⚠️ تعذر عرض الآيات تلقائياً.<br>
-                    <small>يرجى القراءة من المصحف الورقي (من آية ${startV} إلى ${endV})</small>
-                </div>`;
+                displayDiv.innerHTML = `<div style="color:#d32f2f; font-size:16px; padding:10px;">⚠️ تعذر عرض الآيات تلقائياً.<br><small>يرجى القراءة من المصحف (من آية ${startV} إلى ${endV})</small></div>`;
                 console.error("Fetch Error:", error);
             }
         }
@@ -291,7 +204,6 @@
             const player = document.getElementById('audioPlayer');
             const btn = document.getElementById('playBtn');
             const status = document.getElementById('audioStatus');
-
             if (isPlaying) {
                 player.pause();
                 isPlaying = false;
@@ -317,9 +229,8 @@
                 document.getElementById('audioStatus').innerText = `تلاوة آية ${currentAudioIndex + 1}`;
             } else {
                 isPlaying = false;
-                const btn = document.getElementById('playBtn');
-                btn.innerHTML = '<span>🔊</span> إعادة الاستماع';
-                btn.classList.remove('playing');
+                document.getElementById('playBtn').innerHTML = '<span>🔊</span> إعادة الاستماع';
+                document.getElementById('playBtn').classList.remove('playing');
                 document.getElementById('audioStatus').innerText = "انتهت التلاوة";
                 currentAudioIndex = 0;
             }
@@ -327,7 +238,6 @@
 
         function updateUserUI(state) {
             if (!myId) return; 
-
             const myReader = state.queue ? state.queue.find(r => r.id === myId) : null;
             const myIndex = state.queue ? state.queue.findIndex(r => r.id === myId) : -1;
             const currentIndex = state.currentReaderIndex;
@@ -340,13 +250,13 @@
                 return;
             }
 
-            const sName = surahNames[state.settings.surah] || "مختارة";
+            const sName = surahNames[myReader.surahNum] || "مختارة";
             document.getElementById('surahTitle').innerText = `سورة ${sName} - ${myReader.verses}`;
 
-            const currentHash = `${state.settings.surah}-${myReader.startV}-${myReader.endV}`;
+            const currentHash = `${myReader.surahNum}-${myReader.startV}-${myReader.endV}`;
             if (currentHash !== lastVersesHash) {
                 lastVersesHash = currentHash;
-                fetchQuranData(state.settings.surah, myReader.startV, myReader.endV);
+                fetchQuranData(myReader.surahNum, myReader.startV, myReader.endV);
             }
 
             if (myIndex < currentIndex && myIndex !== -1) {
@@ -368,12 +278,10 @@
                 roleBox.classList.add('active');
                 statusText.innerText = "دورك الآن 🎤";
                 subStatus.innerText = "تفضلي بالقراءة";
-                
                 if (lastStatus !== "active") {
                     if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
-
             } else if (diff === 1) {
                 currentStatus = "ready";
                 roleBox.classList.add('ready');
@@ -390,15 +298,12 @@
                 statusText.innerText = "انتظار";
                 subStatus.innerText = `يسبقك في الانتظار: ${diff - 1} قارئات`;
             }
-            
             lastStatus = currentStatus;
         }
 
         window.onload = function() {
             window.addEventListener('storage', (e) => {
-                if (e.key === STORAGE_KEY) {
-                    updateUserUI(JSON.parse(e.newValue));
-                }
+                if (e.key === STORAGE_KEY) updateUserUI(JSON.parse(e.newValue));
             });
         };
     </script>
