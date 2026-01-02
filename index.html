@@ -11,23 +11,22 @@
     <style>
         .hidden { display: none !important; }
         
-        /* تحسينات لصندوق المصحف */
         .quran-container {
             background-color: #fffbf2;
             padding: 25px;
             border-radius: 15px;
             border: 2px solid #d4af37;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            margin-bottom: 25px; /* مسافة أسفله */
+            margin-bottom: 25px;
             text-align: center;
-            margin-top: 20px; /* مسافة تفصله عن مربع الدور */
+            margin-top: 20px;
         }
 
         .quran-header {
             color: #d4af37;
             font-family: 'Amiri Quran', serif;
             font-size: 22px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             border-bottom: 1px solid #ebd598;
             padding-bottom: 10px;
         }
@@ -40,6 +39,7 @@
             direction: rtl;
             margin-bottom: 20px;
             text-align: justify;
+            margin-top: 15px; /* مسافة بين الزر والنص */
         }
 
         .basmala {
@@ -59,23 +59,22 @@
             display: inline-block;
         }
 
-        /* تحسين مربع الدور ليكون في الأعلى */
         .status-box {
-            padding: 20px; /* تقليل الحجم قليلاً لكي لا يأخذ كل الشاشة */
+            padding: 20px;
             border-radius: 15px;
             margin-top: 10px;
             transition: all 0.5s ease;
         }
         
-        /* أزرار الصوت */
+        /* أزرار الصوت - تم تعديل الهوامش لتناسب المكان الجديد */
         .audio-controls {
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 15px;
-            margin-top: 15px;
-            border-top: 1px dashed #d4af37;
-            padding-top: 15px;
+            margin: 10px 0; /* هوامش علوية وسفلية */
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #d4af37; /* خط فاصل تحت الزر */
         }
 
         .btn-audio {
@@ -121,16 +120,16 @@
         <div class="quran-container">
             <div id="surahTitle" class="quran-header">...</div>
             
-            <div id="quranLoading" class="loader hidden">جاري جلب الآيات...</div>
-            
-            <div id="quranTextDisplay" class="quran-text"></div>
-            
             <div class="audio-controls hidden" id="audioControls">
                 <button class="btn-audio" id="playBtn" onclick="toggleAudio()">
                     <span>🔊</span> استماع (الشيخ الحصري)
                 </button>
                 <div id="audioStatus" style="font-size: 14px; color: #555;"></div>
             </div>
+
+            <div id="quranLoading" class="loader hidden">جاري جلب الآيات...</div>
+            
+            <div id="quranTextDisplay" class="quran-text"></div>
         </div>
         
         <button onclick="location.reload()" style="background:none; color:#999; border:none; margin-top:10px; font-size:12px; box-shadow:none;">تسجيل خروج</button>
@@ -145,7 +144,7 @@
         let currentAudioIndex = 0;
         let isPlaying = false;
         let lastVersesHash = ""; 
-        let lastStatus = ""; // لتتبع تغير الحالة وتفعيل التمرير التلقائي
+        let lastStatus = ""; 
 
         const surahNames = [
             "", "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", 
@@ -350,7 +349,7 @@
             const diff = myIndex - currentIndex;
 
             roleBox.classList.remove('waiting', 'ready', 'active');
-            let currentStatus = ""; // لتتبع التغيير
+            let currentStatus = ""; 
 
             if (diff === 0) {
                 currentStatus = "active";
@@ -358,7 +357,6 @@
                 statusText.innerText = "دورك الآن 🎤";
                 subStatus.innerText = "تفضلي بالقراءة";
                 
-                // 🔥 الميزة الجديدة: إذا تغيرت الحالة إلى أخضر، اصعد للأعلى 🔥
                 if (lastStatus !== "active") {
                     if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -381,7 +379,7 @@
                 subStatus.innerText = `يسبقك في الانتظار: ${diff - 1} قارئات`;
             }
             
-            lastStatus = currentStatus; // تحديث الحالة المحفوظة
+            lastStatus = currentStatus;
         }
 
         window.onload = function() {
